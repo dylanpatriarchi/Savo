@@ -1,2 +1,4 @@
 savofor 100 "alo"
+savoprint "-----"
+savowhile "100" "savo"
 savoquit

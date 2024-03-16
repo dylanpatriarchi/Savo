@@ -5,6 +5,7 @@
 	#include "global.h"
 	#include "statements/printstmt.h"
 	#include "statements/forstmt.h"
+	#include "statements/whilestmt.h"
 	#include "y.tab.h"
 	int yyerror(const char *errormsg);
 %}
@@ -51,6 +52,7 @@ NQUOTE [^']
 {S}{A}{V}{O}{D}{I}{R}             { return DIR; }
 {S}{A}{V}{O}{C}{L}{S}             { return CLS; }
 {S}{A}{V}{O}{F}{O}{R}             { return FOR; }
+{S}{A}{V}{O}{W}{H}{I}{L}{E}             { return WHILE; }
 "("                   { return OPENBRACKET;}
 ")"                   { return CLOSEBRACKET;}
 ","                   { return COMMA;}

@@ -5,6 +5,7 @@
   #include <string.h>
   #include "statements/printstmt.h"
   #include "statements/forstmt.h"
+  #include "statements/whilestmt.h"
   int yylex(void);
   int yyerror(const char *s);
 %}
@@ -16,7 +17,7 @@
    void * pVoid;
 };
 
-%token DIR HELP PRINT QUIT CLEAR CLS IDENTIFIER FOR
+%token DIR HELP PRINT QUIT CLEAR CLS IDENTIFIER FOR WHILE
 %token ARGUMENT NUMBER STRING EXIT OPENBRACKET CLOSEBRACKET COMMA
 
 %type <string>  STRING
@@ -37,6 +38,7 @@ commands:
 		   | clsstmt
 		   | clearstmt
        | forstmt
+       | whilestmt
          ;
 
 printstmt:
@@ -103,6 +105,12 @@ clearstmt:
 forstmt:
          FOR NUMBER STRING{ 
 		          forStatement($2, $3);
+			      }
+         ;
+
+whilestmt:
+         WHILE STRING STRING{ 
+		          whileStatement($2, $3);
 			      }
          ;
 
