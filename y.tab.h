@@ -46,13 +46,14 @@
      CLEAR = 262,
      CLS = 263,
      IDENTIFIER = 264,
-     ARGUMENT = 265,
-     NUMBER = 266,
-     STRING = 267,
-     EXIT = 268,
-     OPENBRACKET = 269,
-     CLOSEBRACKET = 270,
-     COMMA = 271
+     FOR = 265,
+     ARGUMENT = 266,
+     NUMBER = 267,
+     STRING = 268,
+     EXIT = 269,
+     OPENBRACKET = 270,
+     CLOSEBRACKET = 271,
+     COMMA = 272
    };
 #endif
 /* Tokens.  */
@@ -63,13 +64,14 @@
 #define CLEAR 262
 #define CLS 263
 #define IDENTIFIER 264
-#define ARGUMENT 265
-#define NUMBER 266
-#define STRING 267
-#define EXIT 268
-#define OPENBRACKET 269
-#define CLOSEBRACKET 270
-#define COMMA 271
+#define FOR 265
+#define ARGUMENT 266
+#define NUMBER 267
+#define STRING 268
+#define EXIT 269
+#define OPENBRACKET 270
+#define CLOSEBRACKET 271
+#define COMMA 272
 
 
 
@@ -79,7 +81,7 @@ typedef union YYSTYPE
 {
 
 /* Line 1676 of yacc.c  */
-#line 11 "parser.y"
+#line 12 "parser.y"
 
    char * string;
    int    number;
@@ -89,7 +91,7 @@ typedef union YYSTYPE
 
 
 /* Line 1676 of yacc.c  */
-#line 93 "y.tab.h"
+#line 95 "y.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

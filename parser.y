@@ -4,6 +4,7 @@
   #include "global.h"
   #include <string.h>
   #include "statements/printstmt.h"
+  #include "statements/forstmt.h"
   int yylex(void);
   int yyerror(const char *s);
 %}
@@ -15,7 +16,7 @@
    void * pVoid;
 };
 
-%token DIR HELP PRINT QUIT CLEAR CLS IDENTIFIER
+%token DIR HELP PRINT QUIT CLEAR CLS IDENTIFIER FOR
 %token ARGUMENT NUMBER STRING EXIT OPENBRACKET CLOSEBRACKET COMMA
 
 %type <string>  STRING
@@ -35,6 +36,7 @@ commands:
  		   | quitstmt
 		   | clsstmt
 		   | clearstmt
+       | forstmt
          ;
 
 printstmt:
@@ -95,6 +97,12 @@ clearstmt:
 				         system("clear"); 
 	                  printf("%s", consoleMex);
 				      } 
+			      }
+         ;
+
+forstmt:
+         FOR NUMBER STRING{ 
+		          forStatement($2, $3);
 			      }
          ;
 
