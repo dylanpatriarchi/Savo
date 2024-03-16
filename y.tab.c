@@ -458,7 +458,7 @@ static const yytype_int8 yyrhs[] =
       23,    -1,    24,    -1,    25,    -1,    26,    -1,    27,    -1,
       28,    -1,    29,    -1,     5,    14,    -1,     3,    12,    -1,
        3,    -1,     4,    -1,     6,    -1,    15,    -1,     8,    -1,
-       7,    -1,    10,    13,    14,    -1,    11,    14,    14,    -1
+       7,    -1,    10,    13,    14,    -1,    11,    13,    14,    -1
 };
 
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
@@ -531,15 +531,15 @@ static const yytype_int8 yydefgoto[] =
 #define YYPACT_NINF -7
 static const yytype_int8 yypact[] =
 {
-      -3,    -6,    -7,    -5,    -7,    -7,    -7,    -2,    -4,    -7,
-      13,    -3,    -7,    -7,    -7,    -7,    -7,    -7,    -7,    -7,
-      -7,    -7,     0,     1,    -7,    -7,    -7,    -7
+      -3,    -6,    -7,    -5,    -7,    -7,    -7,    -2,     0,    -7,
+      10,    -3,    -7,    -7,    -7,    -7,    -7,    -7,    -7,    -7,
+      -7,    -7,     1,     2,    -7,    -7,    -7,    -7
 };
 
 /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int8 yypgoto[] =
 {
-      -7,     5,    -7,    -7,    -7,    -7,    -7,    -7,    -7,    -7,
+      -7,     3,    -7,    -7,    -7,    -7,    -7,    -7,    -7,    -7,
       -7
 };
 
@@ -551,13 +551,13 @@ static const yytype_int8 yypgoto[] =
 static const yytype_uint8 yytable[] =
 {
        1,     2,     3,     4,     5,     6,    20,     7,     8,    21,
-      23,    22,     9,    24,    26,    27,    25
+      24,    22,     9,    23,    25,    26,    27
 };
 
 static const yytype_uint8 yycheck[] =
 {
        3,     4,     5,     6,     7,     8,    12,    10,    11,    14,
-      14,    13,    15,     0,    14,    14,    11
+       0,    13,    15,    13,    11,    14,    14
 };
 
 /* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
@@ -566,7 +566,7 @@ static const yytype_uint8 yystos[] =
 {
        0,     3,     4,     5,     6,     7,     8,    10,    11,    15,
       20,    21,    22,    23,    24,    25,    26,    27,    28,    29,
-      12,    14,    13,    14,     0,    20,    14,    14
+      12,    14,    13,    13,     0,    20,    14,    14
 };
 
 #define yyerrok		(yyerrstatus = 0)
@@ -1482,7 +1482,7 @@ yyreduce:
 /* Line 1455 of yacc.c  */
 #line 112 "parser.y"
     { 
-		          whileStatement((yyvsp[(2) - (3)].string), (yyvsp[(3) - (3)].string));
+		          whileStatement((yyvsp[(2) - (3)].fNumber), (yyvsp[(3) - (3)].string));
 			      }
     break;
 
