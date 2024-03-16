@@ -109,7 +109,7 @@ forstmt:
          ;
 
 whilestmt:
-         WHILE STRING STRING{ 
+         WHILE INT STRING{ 
 		          whileStatement($2, $3);
 			      }
          ;

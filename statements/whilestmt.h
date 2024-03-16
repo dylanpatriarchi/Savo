@@ -1,4 +1,4 @@
 #ifndef WHILESTMT_H
 #define WHILESTMT_H
-void whileStatement(const char*, const char*);
+void whileStatement(int, const char*);
 #endif
