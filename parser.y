@@ -17,7 +17,7 @@
    void * pVoid;
 };
 
-%token DIR HELP PRINT QUIT CLEAR CLS IDENTIFIER FOR WHILE
+%token DIR HELP PRINT QUIT CLEAR CLS IDENTIFIER FOR WHILE SUM SUBTRACT POINTERCELL
 %token ARGUMENT NUMBER STRING EXIT OPENBRACKET CLOSEBRACKET COMMA
 
 %type <string>  STRING
@@ -39,7 +39,31 @@ commands:
 		   | clearstmt
        | forstmt
        | whilestmt
+       | addstmt
+       | subtractstmt
+       | pointerstmt
          ;
+
+pointerstmt:
+    POINTERCELL STRING {
+        printf("%s: %p\n", $2, &($2));
+    }
+    ;
+
+
+addstmt:
+    SUM NUMBER NUMBER {
+        float result = $2 + $3;
+        printf("%.2f\n", result);
+    }
+    ;
+
+subtractstmt:
+    SUBTRACT NUMBER NUMBER {
+        float result = $2 - $3;
+        printf("%.2f\n", result);
+    }
+    ;
 
 printstmt:
          PRINT STRING { 

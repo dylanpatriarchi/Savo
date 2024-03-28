@@ -52,28 +52,32 @@ NQUOTE [^']
 {S}{A}{V}{O}{D}{I}{R}             { return DIR; }
 {S}{A}{V}{O}{C}{L}{S}             { return CLS; }
 {S}{A}{V}{O}{F}{O}{R}             { return FOR; }
-{S}{A}{V}{O}{W}{H}{I}{L}{E}             { return WHILE; }
+{S}{A}{V}{O}{W}{H}{I}{L}{E}       { return WHILE; }
+{S}{A}{V}{O}{S}{U}{M}             { return SUM; }
+{S}{A}{V}{O}{S}{U}{B}{T}{R}{A}{C}{T}   { return SUBTRACT; }
+{S}{A}{V}{O}{P}{O}{I}{N}{T}{E}{R}{C}{E}{L}{L}   { return POINTERCELL; }
+
 "("                   { return OPENBRACKET;}
 ")"                   { return CLOSEBRACKET;}
 ","                   { return COMMA;}
 [\n]                  { if(strlen(prompt) > 0) printf(prompt); }
 [ \t\v\f]+            {}
-{String} 		      { yylval.string = strdup( yytext + 1 ); yylval.string[ yyleng - 2 ] = 0; return STRING; }
-{Number}      	      { yylval.fNumber = atof( yytext ); return NUMBER; }
+{String}              { yylval.string = strdup( yytext + 1 ); yylval.string[ yyleng - 2 ] = 0; return STRING; }
+{Number}              { yylval.fNumber = atof( yytext ); return NUMBER; }
 {Argument}            { yylval.string = strdup( yytext); return ARGUMENT; }
-{Identifier} 		  { yylval.string = strdup( yytext); return IDENTIFIER; }
+{Identifier}          { yylval.string = strdup( yytext); return IDENTIFIER; }
 
 %%
 int main(int argc, char **argv) {
     ++argv;
     yyin = stdin;
     if ( --argc > 0 ) {
-		prompt = "";
-	    yyin = fopen(argv[0], "r");
-	} else {
-	    printf("%s", consoleMex);
-		printf(prompt);
-	}
+        prompt = "";
+        yyin = fopen(argv[0], "r");
+    } else {
+        printf("%s", consoleMex);
+        printf(prompt);
+    }
     yyparse();
     return 0;
 }
