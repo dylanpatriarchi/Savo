@@ -17,7 +17,7 @@
    void * pVoid;
 };
 
-%token DIR HELP PRINT QUIT CLEAR CLS IDENTIFIER FOR WHILE SUM SUBTRACT POINTERCELL
+%token DIR HELP PRINT QUIT CLEAR CLS IDENTIFIER FOR WHILE SUM SUBTRACT POINTERCELL MOLTIPLICATION
 %token ARGUMENT NUMBER STRING EXIT OPENBRACKET CLOSEBRACKET COMMA
 
 %type <string>  STRING
@@ -42,7 +42,14 @@ commands:
        | addstmt
        | subtractstmt
        | pointerstmt
+       | moltiplicationstmt
          ;
+
+moltiplicationstmt:
+    MOLTIPLICATION NUMBER NUMBER{
+        float result = $2 * $3;
+        printf("%.2f\n", result);
+    }
 
 pointerstmt:
     POINTERCELL STRING {

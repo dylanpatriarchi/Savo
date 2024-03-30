@@ -51,13 +51,14 @@
      SUM = 267,
      SUBTRACT = 268,
      POINTERCELL = 269,
-     ARGUMENT = 270,
-     NUMBER = 271,
-     STRING = 272,
-     EXIT = 273,
-     OPENBRACKET = 274,
-     CLOSEBRACKET = 275,
-     COMMA = 276
+     MOLTIPLICATION = 270,
+     ARGUMENT = 271,
+     NUMBER = 272,
+     STRING = 273,
+     EXIT = 274,
+     OPENBRACKET = 275,
+     CLOSEBRACKET = 276,
+     COMMA = 277
    };
 #endif
 /* Tokens.  */
@@ -73,13 +74,14 @@
 #define SUM 267
 #define SUBTRACT 268
 #define POINTERCELL 269
-#define ARGUMENT 270
-#define NUMBER 271
-#define STRING 272
-#define EXIT 273
-#define OPENBRACKET 274
-#define CLOSEBRACKET 275
-#define COMMA 276
+#define MOLTIPLICATION 270
+#define ARGUMENT 271
+#define NUMBER 272
+#define STRING 273
+#define EXIT 274
+#define OPENBRACKET 275
+#define CLOSEBRACKET 276
+#define COMMA 277
 
 
 
@@ -99,7 +101,7 @@ typedef union YYSTYPE
 
 
 /* Line 1676 of yacc.c  */
-#line 103 "y.tab.h"
+#line 105 "y.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

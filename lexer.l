@@ -56,6 +56,7 @@ NQUOTE [^']
 {S}{A}{V}{O}{S}{U}{M}             { return SUM; }
 {S}{A}{V}{O}{S}{U}{B}{T}{R}{A}{C}{T}   { return SUBTRACT; }
 {S}{A}{V}{O}{P}{O}{I}{N}{T}{E}{R}{C}{E}{L}{L}   { return POINTERCELL; }
+{S}{A}{V}{O}{P}{O}{M}{O}{L}{T}{I}{P}{L}{I}{C}{A}{T}{I}{O}{N}   { return MOLTIPLICATION; }
 
 "("                   { return OPENBRACKET;}
 ")"                   { return CLOSEBRACKET;}

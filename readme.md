@@ -94,6 +94,16 @@ Syntax:
 savosum number1 number2
 ```
 
+## Moltiplication Statement
+
+The savomoltiplication statement calculates the moltiplication of two numbers.
+
+Syntax:
+
+```bash
+savomoltiplication number1 number2
+```
+
 ## Subtraction Statement
 
 The savosubtract statement calculates the difference between two numbers.
