@@ -60,7 +60,8 @@
      EXIT = 276,
      OPENBRACKET = 277,
      CLOSEBRACKET = 278,
-     COMMA = 279
+     COMMA = 279,
+     NEGATION = 280
    };
 #endif
 /* Tokens.  */
@@ -86,6 +87,7 @@
 #define OPENBRACKET 277
 #define CLOSEBRACKET 278
 #define COMMA 279
+#define NEGATION 280
 
 
 
@@ -105,7 +107,7 @@ typedef union YYSTYPE
 
 
 /* Line 1676 of yacc.c  */
-#line 109 "y.tab.h"
+#line 111 "y.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

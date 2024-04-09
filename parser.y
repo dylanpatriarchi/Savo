@@ -18,7 +18,7 @@
 };
 
 %token DIR HELP PRINT QUIT CLEAR CLS IDENTIFIER FOR WHILE SUM SUBTRACT POINTERCELL MOLTIPLICATION EQUAL IF
-%token ARGUMENT NUMBER STRING EXIT OPENBRACKET CLOSEBRACKET COMMA
+%token ARGUMENT NUMBER STRING EXIT OPENBRACKET CLOSEBRACKET COMMA NEGATION
 
 %type <string>  STRING
 %type <string>  ARGUMENT
@@ -56,6 +56,13 @@ ifstmt:
     } ;
     | IF OPENBRACKET NUMBER CLOSEBRACKET {
             if($3){
+                printf("true\n");
+            }else{
+                printf("false\n");
+            }
+        };
+    | IF OPENBRACKET  NEGATION NUMBER CLOSEBRACKET {
+            if(!$4){
                 printf("true\n");
             }else{
                 printf("false\n");

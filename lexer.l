@@ -60,6 +60,7 @@ NQUOTE [^']
 {S}{A}{V}{O}{I}{F}   { return IF; }
 
 "("                   { return OPENBRACKET;}
+"!"                   { return NEGATION;}
 ")"                   { return CLOSEBRACKET;}
 ","                   { return COMMA;}
 "=="                   { return EQUAL;}
