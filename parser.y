@@ -171,6 +171,12 @@ forstmt:
 		          forStatement($2, $3);
 			      }
          ;
+         | FOR OPENBRACKET NUMBER COMMA NUMBER COMMA NUMBER CLOSEBRACKET STRING{
+            int i = 0;
+            for(i = $3; i < $5; i = i + $7){
+                printf("%s\n", $9);
+            }
+         };
 
 whilestmt:
          WHILE NUMBER STRING{ 
