@@ -1,1 +1,1 @@
-savoif(3==3)
+savoif("a" == "b")

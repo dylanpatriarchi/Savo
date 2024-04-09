@@ -43,18 +43,32 @@ commands:
        | subtractstmt
        | pointerstmt
        | moltiplicationstmt
-       | ifnumberstmt
+       | ifstmt
          ;
 
-ifnumberstmt:
+ifstmt:
     IF OPENBRACKET NUMBER EQUAL NUMBER CLOSEBRACKET {
         if ($3 == $5) {
             printf("true\n");
         }else{
             printf("false\n");
         }
-    }
-    ;
+    } ;
+    | IF OPENBRACKET NUMBER CLOSEBRACKET {
+            if($3){
+                printf("true\n");
+            }else{
+                printf("false\n");
+            }
+        };
+    | IF OPENBRACKET STRING EQUAL STRING CLOSEBRACKET{
+            if(strcmp($3, $5) == 0){
+                printf("true\n");
+            }else{
+                printf("false\n");
+            }
+        };
+    
 
 moltiplicationstmt:
     MOLTIPLICATION NUMBER NUMBER{
