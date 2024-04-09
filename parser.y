@@ -137,6 +137,12 @@ helpstmt:
                  printf("savoLs\t<arguments>\t\tlist files in directory (linux)\n");
                  printf("savoPage\t<\"file\", \"Title\">\tcreate file HTML to convert\n");
                  printf("savoPrint\t<string literal>\tprint to stdout/file string literal in argument\n");
+                 printf("savofor\t<open bracket><index><comma><index><comma><index><close bracket><string literal> or <index><string literal>\t\n");
+                 printf("savoPointerCell\t<string literal>\tprint memory address\n");
+                 printf("savoSubtract\t<number literal><number literal>\tSubtract Numbers\n");
+                 printf("savoAdd\t<number literal><number literal>\tAdd Numbers\n");
+                 printf("savoMoltiplication\t<number literal><number literal>\tMoltiplications of Numbers\n");
+                 printf("savoIf\t<condition>\t\n");
                  printf("savoquit | Exit\t\t\tExit this program\n");
                  printf("savorm\t<\"file name\">\t\tdelete file in argument (linux)\n");
 		           printf("\n");
