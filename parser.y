@@ -17,7 +17,7 @@
    void * pVoid;
 };
 
-%token DIR HELP PRINT QUIT CLEAR CLS IDENTIFIER FOR WHILE SUM SUBTRACT POINTERCELL MOLTIPLICATION
+%token DIR HELP PRINT QUIT CLEAR CLS IDENTIFIER FOR WHILE SUM SUBTRACT POINTERCELL MOLTIPLICATION EQUAL IF
 %token ARGUMENT NUMBER STRING EXIT OPENBRACKET CLOSEBRACKET COMMA
 
 %type <string>  STRING
@@ -43,13 +43,25 @@ commands:
        | subtractstmt
        | pointerstmt
        | moltiplicationstmt
+       | ifnumberstmt
          ;
+
+ifnumberstmt:
+    IF OPENBRACKET NUMBER EQUAL NUMBER CLOSEBRACKET {
+        if ($3 == $5) {
+            printf("true\n");
+        }else{
+            printf("false\n");
+        }
+    }
+    ;
 
 moltiplicationstmt:
     MOLTIPLICATION NUMBER NUMBER{
         float result = $2 * $3;
         printf("%.2f\n", result);
     }
+    ;
 
 pointerstmt:
     POINTERCELL STRING {

@@ -57,10 +57,12 @@ NQUOTE [^']
 {S}{A}{V}{O}{S}{U}{B}{T}{R}{A}{C}{T}   { return SUBTRACT; }
 {S}{A}{V}{O}{P}{O}{I}{N}{T}{E}{R}{C}{E}{L}{L}   { return POINTERCELL; }
 {S}{A}{V}{O}{P}{O}{M}{O}{L}{T}{I}{P}{L}{I}{C}{A}{T}{I}{O}{N}   { return MOLTIPLICATION; }
+{S}{A}{V}{O}{I}{F}   { return IF; }
 
 "("                   { return OPENBRACKET;}
 ")"                   { return CLOSEBRACKET;}
 ","                   { return COMMA;}
+"=="                   { return EQUAL;}
 [\n]                  { if(strlen(prompt) > 0) printf(prompt); }
 [ \t\v\f]+            {}
 {String}              { yylval.string = strdup( yytext + 1 ); yylval.string[ yyleng - 2 ] = 0; return STRING; }
