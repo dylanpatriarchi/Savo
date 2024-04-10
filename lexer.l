@@ -58,7 +58,7 @@ NQUOTE [^']
 {S}{A}{V}{O}{P}{O}{I}{N}{T}{E}{R}{C}{E}{L}{L}   { return POINTERCELL; }
 {S}{A}{V}{O}{P}{O}{M}{O}{L}{T}{I}{P}{L}{I}{C}{A}{T}{I}{O}{N}   { return MOLTIPLICATION; }
 {S}{A}{V}{O}{I}{F}   { return IF; }
-
+"!="                  { return NOTEQUAL; }
 "("                   { return OPENBRACKET;}
 "!"                   { return NEGATION;}
 ")"                   { return CLOSEBRACKET;}

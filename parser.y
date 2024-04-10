@@ -17,7 +17,7 @@
    void * pVoid;
 };
 
-%token DIR HELP PRINT QUIT CLEAR CLS IDENTIFIER FOR WHILE SUM SUBTRACT POINTERCELL MOLTIPLICATION EQUAL IF
+%token DIR HELP PRINT QUIT CLEAR CLS IDENTIFIER FOR WHILE SUM SUBTRACT POINTERCELL MOLTIPLICATION EQUAL IF NOTEQUAL
 %token ARGUMENT NUMBER STRING EXIT OPENBRACKET CLOSEBRACKET COMMA NEGATION
 
 %type <string>  STRING
@@ -61,7 +61,7 @@ ifstmt:
                 printf("false\n");
             }
         };
-    | IF OPENBRACKET  NEGATION NUMBER CLOSEBRACKET {
+    | IF OPENBRACKET NEGATION NUMBER CLOSEBRACKET {
             if(!$4){
                 printf("true\n");
             }else{
@@ -70,6 +70,20 @@ ifstmt:
         };
     | IF OPENBRACKET STRING EQUAL STRING CLOSEBRACKET{
             if(strcmp($3, $5) == 0){
+                printf("true\n");
+            }else{
+                printf("false\n");
+            }
+        };
+    | IF OPENBRACKET NUMBER NOTEQUAL NUMBER CLOSEBRACKET {
+        if ($3 != $5) {
+            printf("true\n");
+        }else{
+            printf("false\n");
+        }
+    } ;
+    | IF OPENBRACKET STRING NOTEQUAL STRING CLOSEBRACKET{
+            if(strcmp($3, $5) != 0){
                 printf("true\n");
             }else{
                 printf("false\n");

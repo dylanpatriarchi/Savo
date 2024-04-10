@@ -54,14 +54,15 @@
      MOLTIPLICATION = 270,
      EQUAL = 271,
      IF = 272,
-     ARGUMENT = 273,
-     NUMBER = 274,
-     STRING = 275,
-     EXIT = 276,
-     OPENBRACKET = 277,
-     CLOSEBRACKET = 278,
-     COMMA = 279,
-     NEGATION = 280
+     NOTEQUAL = 273,
+     ARGUMENT = 274,
+     NUMBER = 275,
+     STRING = 276,
+     EXIT = 277,
+     OPENBRACKET = 278,
+     CLOSEBRACKET = 279,
+     COMMA = 280,
+     NEGATION = 281
    };
 #endif
 /* Tokens.  */
@@ -80,14 +81,15 @@
 #define MOLTIPLICATION 270
 #define EQUAL 271
 #define IF 272
-#define ARGUMENT 273
-#define NUMBER 274
-#define STRING 275
-#define EXIT 276
-#define OPENBRACKET 277
-#define CLOSEBRACKET 278
-#define COMMA 279
-#define NEGATION 280
+#define NOTEQUAL 273
+#define ARGUMENT 274
+#define NUMBER 275
+#define STRING 276
+#define EXIT 277
+#define OPENBRACKET 278
+#define CLOSEBRACKET 279
+#define COMMA 280
+#define NEGATION 281
 
 
 
@@ -107,7 +109,7 @@ typedef union YYSTYPE
 
 
 /* Line 1676 of yacc.c  */
-#line 111 "y.tab.h"
+#line 113 "y.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
