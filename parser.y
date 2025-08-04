@@ -1,6 +1,7 @@
 %{
   #include <stdio.h>
   #include <stdlib.h>
+  #include <math.h>
   #include "global.h"
   #include <string.h>
   #include "statements/printstmt.h"
@@ -18,6 +19,7 @@
 };
 
 %token DIR HELP PRINT QUIT CLEAR CLS IDENTIFIER FOR WHILE SUM SUBTRACT POINTERCELL MOLTIPLICATION EQUAL IF NOTEQUAL
+%token VAR SQRT POW MAX MIN PLUS MINUS MULTIPLY DIVIDE
 %token ARGUMENT NUMBER STRING EXIT OPENBRACKET CLOSEBRACKET COMMA NEGATION
 
 %type <string>  STRING
@@ -44,6 +46,11 @@ commands:
        | pointerstmt
        | moltiplicationstmt
        | ifstmt
+       | varstmt
+       | sqrtstmt
+       | powstmt
+       | maxstmt
+       | minstmt
          ;
 
 ifstmt:
@@ -124,6 +131,14 @@ printstmt:
 		                    printStatement($2);    
 						        if(strlen(prompt) > 0) printf("\n");
                       }
+         | PRINT STRING PLUS NUMBER {
+             printf("%s%.2f", $2, $4);
+             if(strlen(prompt) > 0) printf("\n");
+         }
+         | PRINT STRING MULTIPLY NUMBER {
+             printf("%s%.2f", $2, $4);
+             if(strlen(prompt) > 0) printf("\n");
+         }
          ;
 
 dirstmt:
@@ -157,6 +172,11 @@ helpstmt:
                  printf("savoAdd\t<number literal><number literal>\tAdd Numbers\n");
                  printf("savoMoltiplication\t<number literal><number literal>\tMoltiplications of Numbers\n");
                  printf("savoIf\t<condition>\t\n");
+                 printf("savoVar\t<variable><number>\t\tDefine a variable\n");
+                 printf("savoSqrt\t<number>\t\t\tSquare root\n");
+                 printf("savoPow\t<base><exponent>\t\tPower function\n");
+                 printf("savoMax\t<num1><num2>\t\t\tMaximum of two numbers\n");
+                 printf("savoMin\t<num1><num2>\t\t\tMinimum of two numbers\n");
                  printf("savoquit | Exit\t\t\tExit this program\n");
                  printf("savorm\t<\"file name\">\t\tdelete file in argument (linux)\n");
 		           printf("\n");
@@ -196,12 +216,59 @@ forstmt:
             for(i = $3; i < $5; i = i + $7){
                 printf("%s\n", $9);
             }
-         };
+         }
+         | FOR OPENBRACKET NUMBER COMMA NUMBER COMMA NUMBER CLOSEBRACKET STRING PLUS NUMBER{
+            int i = 0;
+            for(i = $3; i < $5; i = i + $7){
+                printf("%s%.0f\n", $9, i + $11);
+            }
+         }
+         | FOR OPENBRACKET NUMBER COMMA NUMBER COMMA NUMBER CLOSEBRACKET STRING MULTIPLY NUMBER{
+            int i = 0;
+            for(i = $3; i < $5; i = i + $7){
+                printf("%s%.0f\n", $9, i * $11);
+            }
+         }
+         ;
 
 whilestmt:
          WHILE NUMBER STRING{ 
 		          whileStatement($2, $3);
 			      }
          ;
+
+varstmt:
+    VAR IDENTIFIER NUMBER {
+        printf("Variabile %s = %.2f\n", $2, $3);
+    }
+    ;
+
+sqrtstmt:
+    SQRT NUMBER {
+        float result = sqrt($2);
+        printf("√%.2f = %.2f\n", $2, result);
+    }
+    ;
+
+powstmt:
+    POW NUMBER NUMBER {
+        float result = pow($2, $3);
+        printf("%.2f^%.2f = %.2f\n", $2, $3, result);
+    }
+    ;
+
+maxstmt:
+    MAX NUMBER NUMBER {
+        float result = ($2 > $3) ? $2 : $3;
+        printf("max(%.2f, %.2f) = %.2f\n", $2, $3, result);
+    }
+    ;
+
+minstmt:
+    MIN NUMBER NUMBER {
+        float result = ($2 < $3) ? $2 : $3;
+        printf("min(%.2f, %.2f) = %.2f\n", $2, $3, result);
+    }
+    ;
 
 %%

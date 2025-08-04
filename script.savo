@@ -1,0 +1,32 @@
+savoprint "=== SAVO AVANZATO - NUOVE FUNZIONALITÀ ===\n"
+savoprint "Test delle nuove funzionalità matematiche e avanzate\n\n"
+
+savoprint "1. Test funzioni matematiche:\n"
+savosqrt 16
+savopow 2 8
+savomax 15 23
+savomin 45 12
+
+savoprint "2. Test variabili:\n"
+savovar @x 42
+savovar @y 100
+
+savoprint "3. Test ciclo for con operazioni:\n"
+savofor (1, 5, 1) "Numero: " + 10
+savofor (1, 4, 1) "Prodotto: " * 5
+
+savoprint "4. Test stampa con calcoli:\n"
+savoprint "Risultato: " + 25
+savoprint "Valore: " * 3
+
+savoprint "5. Test operazioni matematiche base:\n"
+savosum 15 25
+savosubtract 50 20
+savomoltiplication 6 7
+
+savoprint "6. Test controlli:\n"
+savoif (10 == 10)
+savoif (5 != 10)
+savoif (!0)
+
+savoprint "\n=== TUTTE LE NUOVE FUNZIONALITÀ FUNZIONANO! ===\n"

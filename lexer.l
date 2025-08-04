@@ -6,8 +6,9 @@
 	#include "statements/printstmt.h"
 	#include "statements/forstmt.h"
 	#include "statements/whilestmt.h"
-	#include "y.tab.h"
+	#include "parser.tab.h"
 	int yyerror(const char *errormsg);
+	int yyparse(void);
 %}
 
 Number        ([0-9]+)|([0-9]+\.[0-9]+)|(\.[0-9]+)
@@ -58,13 +59,22 @@ NQUOTE [^']
 {S}{A}{V}{O}{P}{O}{I}{N}{T}{E}{R}{C}{E}{L}{L}   { return POINTERCELL; }
 {S}{A}{V}{O}{P}{O}{M}{O}{L}{T}{I}{P}{L}{I}{C}{A}{T}{I}{O}{N}   { return MOLTIPLICATION; }
 {S}{A}{V}{O}{I}{F}   { return IF; }
+{S}{A}{V}{O}{V}{A}{R}   { return VAR; }
+{S}{A}{V}{O}{S}{Q}{R}{T}   { return SQRT; }
+{S}{A}{V}{O}{P}{O}{W}   { return POW; }
+{S}{A}{V}{O}{M}{A}{X}   { return MAX; }
+{S}{A}{V}{O}{M}{I}{N}   { return MIN; }
 "!="                  { return NOTEQUAL; }
 "("                   { return OPENBRACKET;}
 "!"                   { return NEGATION;}
 ")"                   { return CLOSEBRACKET;}
 ","                   { return COMMA;}
 "=="                   { return EQUAL;}
-[\n]                  { if(strlen(prompt) > 0) printf(prompt); }
+"+"                   { return PLUS;}
+"-"                   { return MINUS;}
+"*"                   { return MULTIPLY;}
+"/"                   { return DIVIDE;}
+[\n]                  { }
 [ \t\v\f]+            {}
 {String}              { yylval.string = strdup( yytext + 1 ); yylval.string[ yyleng - 2 ] = 0; return STRING; }
 {Number}              { yylval.fNumber = atof( yytext ); return NUMBER; }
@@ -80,7 +90,7 @@ int main(int argc, char **argv) {
         yyin = fopen(argv[0], "r");
     } else {
         printf("%s", consoleMex);
-        printf(prompt);
+        printf("%s", prompt);
     }
     yyparse();
     return 0;

@@ -7,7 +7,7 @@
 
 void whileStatement(int condition, const char* argument) {
     if (condition != 1 && condition != 0) {
-        int iterations = atoi(condition);
+        int iterations = condition;
         int i;
         for (i = 0; i < iterations; i++) {
             printf("%s\n", argument);
