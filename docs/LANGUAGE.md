@@ -12,6 +12,7 @@ all valid).
 - [Expressions](#expressions)
 - [Strings](#strings)
 - [Arrays](#arrays)
+- [Objects](#objects)
 - [Output](#output)
 - [Arithmetic](#arithmetic)
 - [Math functions](#math-functions)
@@ -165,6 +166,44 @@ savovar @b = @a
 savopush @b 3
 savoprint savolen(@a) + "\n"     # 3.00 — @a and @b are the same array
 ```
+
+## Objects
+
+Objects are string-keyed maps written with braces. Values can be any type,
+including arrays and other objects:
+
+```savo
+savovar @user = {name: "Ada", age: 36}
+```
+
+Read a field with dot notation `@o.field` or a bracket key `@o["field"]` (use
+brackets when the key is dynamic). Update or add fields with `savoset`:
+
+```savo
+savoprint @user.name + "\n"          # Ada
+savoset @user.age = 37               # update
+savoset @user.city = "London"        # add a new field
+savoprint @user["age"] + "\n"        # 37.00
+```
+
+`savolen(@o)` returns the number of keys. Like arrays, objects are **shared by
+reference**.
+
+Objects and arrays combine into any data structure you need — records, trees,
+graphs. A tree node, for example, is just an object with a `children` array
+(grow a nested array through a shared reference):
+
+```savo
+savovar @node = {value: 1, children: []}
+savovar @kids = @node.children       # shares the array
+savopush @kids {value: 2, children: []}
+savoprint @node.children[0].value + "\n"   # 2.00
+```
+
+> `savopush` and `savoset`'s left side name a plain variable. To mutate a nested
+> collection like `@node.children`, bind it to a variable first (`savovar @kids =
+> @node.children`) — the reference is shared, so the change is reflected in the
+> parent.
 
 ## Output
 
@@ -345,7 +384,7 @@ terminal it runs the interactive REPL with the banner and `>>>` prompt.
 | `savolen` / `savoupper` / `savolower` | `(<expr>)` | String length / upper / lower |
 | `savostr` / `savonum` | `(<expr>)` | Convert number↔string |
 | `savopush` | `@a <expr>` | Append to an array |
-| `savoset` | `@a[i] = <expr>` | Set an array element |
+| `savoset` | `@a[i] = <expr>` / `@o.k = <expr>` | Set an array element or object field |
 | `savosum` | `<value> <value>` | Add |
 | `savosubtract` | `<value> <value>` | Subtract |
 | `savomoltiplication` | `<value> <value>` | Multiply |

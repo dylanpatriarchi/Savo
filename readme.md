@@ -60,16 +60,18 @@ its line number and the interpreter keeps going with the next line.
 | Math        | `savosqrt`, `savopow`, `savoabs`, `savofloor`, `savoceil`, `savoround`, `savolog`, `savolog10`, `savomax`, `savomin`, `savorandom` |
 | Strings     | `savolen`, `savoupper`, `savolower`, `savostr`, `savonum` (+ `+` concatenation) |
 | Arrays      | `[ … ]` literals, `@a[i]` indexing, `savopush`, `savoset`, `savolen` |
+| Objects     | `{ k: v }` literals, `@o.field` / `@o["k"]` access, `savoset`, `savolen` |
 | Control     | `savoif`/`savoelse`/`savoend`, `savowhile`, `savofor` |
 | Functions   | `savodef`/`savoreturn` |
 | Console     | `savodir`, `savols`, `savocls`, `savoclear`, `savopointercell`, `savohelp`, `savoquit`, `savoexit` |
 
-Values are **dynamically typed** — a variable holds a number, a string, or an
-array. Anywhere a value is expected you can write a full **expression**:
-`+ - * / %`, comparisons, `!`, parentheses, subscripts `@a[i]` and nested
-function calls such as `savosqrt(@x * @x + 9)`. `+` adds numbers and
-**concatenates** when either side is a string. Arrays are mutable and shared by
-reference. See [`docs/LANGUAGE.md`](docs/LANGUAGE.md) for the complete reference.
+Values are **dynamically typed** — a variable holds a number, a string, an array
+or an object. Anywhere a value is expected you can write a full **expression**:
+`+ - * / %`, comparisons, `!`, parentheses, subscripts `@a[i]`, field access
+`@o.field` and nested function calls such as `savosqrt(@x * @x + 9)`. `+` adds
+numbers and **concatenates** when either side is a string. Arrays and objects
+are mutable and shared by reference, so together they express records, trees and
+graphs. See [`docs/LANGUAGE.md`](docs/LANGUAGE.md) for the complete reference.
 
 ### A quick tour
 

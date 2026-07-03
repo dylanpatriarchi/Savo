@@ -15,6 +15,7 @@ BIN      := savo
 
 CORE_SRCS := $(SRC)/global.c $(SRC)/value.c $(SRC)/symtab.c $(SRC)/ast.c
 GEN_SRCS  := $(BUILD)/parser.tab.c $(BUILD)/lex.yy.c
+HEADERS   := $(wildcard $(SRC)/*.h)
 
 .PHONY: all run example test clean
 
@@ -30,7 +31,7 @@ $(BUILD)/parser.tab.c $(BUILD)/parser.tab.h: $(SRC)/parser.y | $(BUILD)
 $(BUILD)/lex.yy.c: $(SRC)/lexer.l $(BUILD)/parser.tab.h | $(BUILD)
 	flex -o $(BUILD)/lex.yy.c $(SRC)/lexer.l
 
-$(BIN): $(GEN_SRCS) $(CORE_SRCS)
+$(BIN): $(GEN_SRCS) $(CORE_SRCS) $(HEADERS)
 	$(CC) $(CFLAGS) $(GEN_SRCS) $(CORE_SRCS) -o $(BIN) $(LDLIBS)
 
 run: $(BIN)

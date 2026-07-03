@@ -1,0 +1,20 @@
+# objects: literals, field access, set, bracket keys, nesting via references
+savovar @p = {name: "Alice", age: 30}
+savoprint "name=" + @p.name + "\n"
+savoprint "age=" + @p.age + "\n"
+savoset @p.age = 31
+savoset @p.city = "Rome"
+savoprint "age=" + @p.age + " city=" + @p.city + "\n"
+savoprint "keys=" + savolen(@p) + "\n"
+savoprint "bracket=" + @p["name"] + "\n"
+
+# objects living inside arrays
+savovar @people = [{n: "Bob"}, {n: "Cara"}]
+savoprint @people[1].n + "\n"
+
+# a small tree, grown through a shared reference
+savovar @tree = {value: 1, children: []}
+savovar @kids = @tree.children
+savopush @kids {value: 2}
+savopush @kids {value: 3}
+savoprint "tree " + @tree.value + " " + @tree.children[0].value + " " + @tree.children[1].value + "\n"

@@ -127,6 +127,10 @@ Z [zZ]
 ")"                   { return CLOSEBRACKET; }
 "["                   { return LBRACKET; }
 "]"                   { return RBRACKET; }
+"{"                   { return LBRACE; }
+"}"                   { return RBRACE; }
+":"                   { return COLON; }
+"."                   { return DOT; }
 ","                   { return COMMA; }
 "+"                   { return PLUS; }
 "-"                   { return MINUS; }
