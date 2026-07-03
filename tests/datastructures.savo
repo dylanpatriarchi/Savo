@@ -1,0 +1,48 @@
+# trees and graphs built from objects + arrays
+
+# --- tree: recursive sum ---
+savodef node(@v)
+    savoreturn {value: @v, children: []}
+savoend
+savovar @root = node(10)
+savovar @kids = @root.children
+savopush @kids node(20)
+savopush @kids node(30)
+savodef treesum(@n)
+    savovar @t = @n.value
+    savovar @c = @n.children
+    savovar @i = 0
+    savowhile (@i < savolen(@c))
+        savovar @t = @t + treesum(@c[@i])
+        savovar @i = @i + 1
+    savoend
+    savoreturn @t
+savoend
+savoprint "treesum=" + treesum(@root) + "\n"
+
+# --- graph: DFS reachable count ---
+savovar @g = {}
+savoset @g.A = ["B", "C"]
+savoset @g.B = ["D"]
+savoset @g.C = ["D"]
+savoset @g.D = []
+savovar @seen = {}
+savoset @seen.A = 0
+savoset @seen.B = 0
+savoset @seen.C = 0
+savoset @seen.D = 0
+savodef dfs(@g, @node, @seen)
+    savoset @seen[@node] = 1
+    savovar @count = 1
+    savovar @nbrs = @g[@node]
+    savovar @i = 0
+    savowhile (@i < savolen(@nbrs))
+        savovar @nb = @nbrs[@i]
+        savoif (@seen[@nb] == 0)
+            savovar @count = @count + dfs(@g, @nb, @seen)
+        savoend
+        savovar @i = @i + 1
+    savoend
+    savoreturn @count
+savoend
+savoprint "reachable=" + dfs(@g, "A", @seen) + "\n"

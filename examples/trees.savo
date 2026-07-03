@@ -1,0 +1,61 @@
+# Trees in Savo
+# A tree node is an object: { value: <n>, children: [ <node>, ... ] }.
+# Children live in an array, and both are shared by reference, so a tree is
+# built by growing the children array through a bound variable.
+
+savodef node(@v)
+    savoreturn {value: @v, children: []}
+savoend
+
+# attach @child under @parent (mutates @parent.children in place)
+savodef attach(@parent, @child)
+    savovar @kids = @parent.children
+    savopush @kids @child
+    savoreturn 0
+savoend
+
+# sum of every value in the tree (depth-first recursion)
+savodef treesum(@n)
+    savovar @total = @n.value
+    savovar @kids = @n.children
+    savovar @i = 0
+    savowhile (@i < savolen(@kids))
+        savovar @total = @total + treesum(@kids[@i])
+        savovar @i = @i + 1
+    savoend
+    savoreturn @total
+savoend
+
+# height (longest path from the node to a leaf)
+savodef height(@n)
+    savovar @kids = @n.children
+    savovar @best = 0
+    savovar @i = 0
+    savowhile (@i < savolen(@kids))
+        savovar @h = height(@kids[@i])
+        savoif (@h > @best)
+            savovar @best = @h
+        savoend
+        savovar @i = @i + 1
+    savoend
+    savoreturn @best + 1
+savoend
+
+#          1
+#        / | \
+#       2  3  4
+#         / \
+#        5   6
+savovar @root = node(1)
+savovar @two = node(2)
+savovar @three = node(3)
+savovar @four = node(4)
+savovar @r1 = attach(@root, @two)
+savovar @r2 = attach(@root, @three)
+savovar @r3 = attach(@root, @four)
+savovar @r4 = attach(@three, node(5))
+savovar @r5 = attach(@three, node(6))
+
+savoprint "tree sum    = " + treesum(@root) + "\n"
+savoprint "tree height = " + height(@root) + "\n"
+savoprint "root has " + savolen(@root.children) + " children\n"

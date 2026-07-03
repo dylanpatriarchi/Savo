@@ -45,6 +45,10 @@ echo 'savosum 2 3' | ./savo -   # read a script from stdin
 ./savo --help              # print usage
 ```
 
+The [`examples/`](examples) directory has more, including `trees.savo` (a
+recursive tree with sum/height) and `graphs.savo` (adjacency-list DFS and BFS)
+built entirely from objects and arrays.
+
 When stdin is not a terminal (a pipe or a file), Savo runs in quiet script mode:
 no banner and no auto-inserted newlines. Inside the REPL, type `savohelp` for the
 full command list and `savoquit` (or `savoexit`) to leave. A syntax error reports
