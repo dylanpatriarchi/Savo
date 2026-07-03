@@ -16,7 +16,7 @@
 
 %token DIR HELP PRINT QUIT CLEAR CLS FOR WHILE SUM SUBTRACT POINTERCELL MOLTIPLICATION IF
 %token VAR SQRT POW MAX MIN ABS RANDOM FLOOR CEIL ROUND LOG LOG10 DIVISION MOD LS
-%token OPENBRACKET CLOSEBRACKET COMMA EXIT NEWLINE ASSIGN
+%token OPENBRACKET CLOSEBRACKET COMMA EXIT NEWLINE ASSIGN SAVOEND SAVOELSE
 %token EQUAL NOTEQUAL LT GT LE GE
 %token PLUS MINUS MULTIPLY DIVIDE PERCENT NEGATION
 %token <string>  STRING ARGUMENT IDENTIFIER
@@ -27,7 +27,7 @@
 %type <stmt> divisionstmt modstmt sqrtstmt powstmt maxstmt minstmt absstmt
 %type <stmt> floorstmt ceilstmt roundstmt logstmt log10stmt randomstmt
 %type <stmt> ifstmt forstmt whilestmt dirstmt lsstmt pointerstmt
-%type <stmt> helpstmt quitstmt clsstmt clearstmt
+%type <stmt> helpstmt quitstmt clsstmt clearstmt block
 
 %left EQUAL NOTEQUAL LT GT LE GE
 %left PLUS MINUS
@@ -125,8 +125,8 @@ printstmt:
     ;
 
 varstmt:
-      VAR IDENTIFIER expr           { $$ = stmt_assign($2, $3); }
-    | VAR IDENTIFIER ASSIGN expr    { $$ = stmt_assign($2, $4); }
+      VAR IDENTIFIER expr           { $$ = stmt_assign($2, $3, 1); }  /* echoes  */
+    | VAR IDENTIFIER ASSIGN expr    { $$ = stmt_assign($2, $4, 0); }  /* silent  */
     ;
 
 addstmt:            SUM atom atom            { $$ = stmt_arith(OP_ADD, $2, $3); } ;
@@ -149,8 +149,21 @@ minstmt:    MIN atom atom { $$ = stmt_math2(FN_MIN, $2, $3); } ;
 
 randomstmt: RANDOM atom atom { $$ = stmt_random($2, $3); } ;
 
+/* A block is a newline-separated sequence of statements, collected (not
+ * executed) until its terminator. */
+block:
+      /* empty */          { $$ = stmt_block_new(); }
+    | block NEWLINE        { $$ = $1; }
+    | block stmt NEWLINE   { stmt_block_add($1, $2); $$ = $1; }
+    ;
+
 ifstmt:
-    IF OPENBRACKET ifcond CLOSEBRACKET  { $$ = stmt_ifprint($3); }
+      IF OPENBRACKET ifcond CLOSEBRACKET NEWLINE block SAVOEND {
+          $$ = stmt_if($3, $6, NULL);
+      }
+    | IF OPENBRACKET ifcond CLOSEBRACKET NEWLINE block SAVOELSE NEWLINE block SAVOEND {
+          $$ = stmt_if($3, $6, $9);
+      }
     ;
 
 forstmt:
@@ -169,7 +182,10 @@ forstmt:
     ;
 
 whilestmt:
-    WHILE count STRING  { $$ = stmt_repeat($2, $3); }
+      WHILE count STRING  { $$ = stmt_repeat($2, $3); }
+    | WHILE OPENBRACKET ifcond CLOSEBRACKET NEWLINE block SAVOEND {
+          $$ = stmt_while($3, $6);
+      }
     ;
 
 dirstmt:

@@ -99,6 +99,8 @@ Z [zZ]
 {S}{A}{V}{O}{L}{O}{G}10           { return LOG10; }
 {S}{A}{V}{O}{L}{O}{G}             { return LOG; }
 {S}{A}{V}{O}{I}{F}                { return IF; }
+{S}{A}{V}{O}{E}{L}{S}{E}          { return SAVOELSE; }
+{S}{A}{V}{O}{E}{N}{D}             { return SAVOEND; }
 {S}{A}{V}{O}{V}{A}{R}             { return VAR; }
 {S}{A}{V}{O}{S}{Q}{R}{T}          { return SQRT; }
 {S}{A}{V}{O}{P}{O}{W}             { return POW; }
