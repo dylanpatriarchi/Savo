@@ -1,53 +1,40 @@
-savoprint "=== SAVO 3.0 — FEATURE TOUR ===\n\n"
+savoprint "=== SAVO 3.2 — FEATURE TOUR ===\n\n"
 
 savoprint "1. Variables and expressions:\n"
 savovar @x 42
 savovar @y 8
 savovar @sum = @x + @y
-savoprint "sum = " + @sum
-savoprint "(x + y) * 2 - 10 = " + ((@x + @y) * 2 - 10)
+savoprint "sum = " + @sum + "\n"
+savoprint "(x + y) * 2 - 10 = " + ((@x + @y) * 2 - 10) + "\n"
 
-savoprint "2. Arithmetic:\n"
-savosum @x @y
-savosubtract @x @y
-savomoltiplication 6 7
-savodivide 84 2
-savomod 42 5
+savoprint "2. Strings and concatenation:\n"
+savovar @name = "Savo"
+savoprint "Hello, " + @name + "! (" + savolen(@name) + " chars)\n"
+savoprint "upper: " + savoupper(@name) + ", lower: " + savolower("LANG") + "\n"
 
-savoprint "3. Math functions (also usable inside expressions):\n"
+savoprint "3. Math functions:\n"
 savosqrt 144
 savopow 2 10
-savoabs -17
-savofloor 3.7
-savolog10 1000
 savovar @hyp = savosqrt(3 * 3 + 4 * 4)
-savoprint "hypotenuse of (3,4) = " + @hyp
+savoprint "hypotenuse of (3,4) = " + @hyp + "\n"
 
-savoprint "4. Random number in [1, 100]:\n"
-savorandom 1 100
-
-savoprint "5. Loops:\n"
-savofor 3 "repeat me"
-savofor (0, 5, 1) "index: " + 0
-savofor (1, 4, 1) "double: " * 2
-
-savoprint "6. Conditionals with real bodies:\n"
+savoprint "4. Conditionals with real bodies:\n"
 savoif (@x > @y)
     savoprint "x is greater than y\n"
 savoelse
     savoprint "x is not greater than y\n"
 savoend
 
-savoprint "7. While loop — factorial of 5:\n"
+savoprint "5. While loop — factorial of 5:\n"
 savovar @n = 5
 savovar @f = 1
 savowhile (@n > 1)
     savovar @f = @f * @n
     savovar @n = @n - 1
 savoend
-savoprint "5! = " + @f
+savoprint "5! = " + @f + "\n"
 
-savoprint "8. User-defined functions (with recursion):\n"
+savoprint "6. User-defined functions (with recursion):\n"
 savodef square(@n)
     savoreturn @n * @n
 savoend
@@ -57,7 +44,7 @@ savodef fib(@n)
     savoend
     savoreturn fib(@n - 1) + fib(@n - 2)
 savoend
-savoprint "square(9) = " + square(9)
-savoprint "fib(10) = " + fib(10)
+savoprint "square(9) = " + square(9) + "\n"
+savoprint "fib(10) = " + fib(10) + "\n"
 
 savoprint "\n=== END OF TOUR ===\n"

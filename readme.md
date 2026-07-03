@@ -58,21 +58,25 @@ its line number and the interpreter keeps going with the next line.
 | Variables   | `savovar` |
 | Arithmetic  | `savosum`, `savosubtract`, `savomoltiplication`, `savodivide`, `savomod` |
 | Math        | `savosqrt`, `savopow`, `savoabs`, `savofloor`, `savoceil`, `savoround`, `savolog`, `savolog10`, `savomax`, `savomin`, `savorandom` |
+| Strings     | `savolen`, `savoupper`, `savolower`, `savostr`, `savonum` (+ `+` concatenation) |
 | Control     | `savoif`/`savoelse`/`savoend`, `savowhile`, `savofor` |
 | Functions   | `savodef`/`savoreturn` |
 | Console     | `savodir`, `savols`, `savocls`, `savoclear`, `savopointercell`, `savohelp`, `savoquit`, `savoexit` |
 
-Anywhere a number is expected you can write a full **expression**: `+ - * / %`,
+Values are **dynamically typed** — a variable holds a number or a string.
+Anywhere a value is expected you can write a full **expression**: `+ - * / %`,
 comparisons, `!`, parentheses and nested function calls such as
-`savosqrt(@x * @x + 9)`. See [`docs/LANGUAGE.md`](docs/LANGUAGE.md) for the
-complete reference.
+`savosqrt(@x * @x + 9)`. `+` adds numbers and **concatenates** when either side
+is a string. See [`docs/LANGUAGE.md`](docs/LANGUAGE.md) for the complete
+reference.
 
 ### A quick tour
 
 ```savo
 savovar @x = (3 + 4) * 2      # expressions with precedence -> 14
-savoprint "x = " + @x
-savorandom 1 6                # roll a die
+savoprint "x = " + @x + "\n"  # strings concatenate with +
+savovar @who = "world"
+savoprint savoupper("hi " + @who) + "\n"   # HI WORLD
 
 savodef fact(@n)              # recursive function
     savoif (@n <= 1)
@@ -90,6 +94,7 @@ src/               language sources
 ├── lexer.l        Flex lexer (tokens, escapes, CLI entry point)
 ├── parser.y       Bison grammar that builds the AST
 ├── ast.c/.h       AST nodes + tree-walking interpreter
+├── value.c/.h     dynamic value type (number / string)
 ├── symtab.c/.h    scoped variable storage
 └── global.c/.h    shared runtime state
 examples/          runnable .savo scripts
