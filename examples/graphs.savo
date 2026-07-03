@@ -1,0 +1,70 @@
+# Graphs in Savo
+# A graph is an adjacency list: an object mapping each node to an array of its
+# neighbours. A "visited" object is used to avoid revisiting nodes; it is
+# pre-initialised so every lookup finds a key.
+
+savovar @g = {}
+savoset @g.A = ["B", "C"]
+savoset @g.B = ["D", "E"]
+savoset @g.C = ["F"]
+savoset @g.D = []
+savoset @g.E = ["F"]
+savoset @g.F = []
+
+savodef freshflags()
+    savovar @f = {}
+    savoset @f.A = 0
+    savoset @f.B = 0
+    savoset @f.C = 0
+    savoset @f.D = 0
+    savoset @f.E = 0
+    savoset @f.F = 0
+    savoreturn @f
+savoend
+
+# depth-first traversal; returns the number of nodes reached
+savodef dfs(@g, @node, @seen)
+    savoset @seen[@node] = 1
+    savoprint "visit " + @node + "\n"
+    savovar @count = 1
+    savovar @nbrs = @g[@node]
+    savovar @i = 0
+    savowhile (@i < savolen(@nbrs))
+        savovar @nb = @nbrs[@i]
+        savoif (@seen[@nb] == 0)
+            savovar @count = @count + dfs(@g, @nb, @seen)
+        savoend
+        savovar @i = @i + 1
+    savoend
+    savoreturn @count
+savoend
+
+# breadth-first traversal using an array as a queue
+savodef bfs(@g, @start, @seen)
+    savovar @queue = [@start]
+    savoset @seen[@start] = 1
+    savovar @head = 0
+    savowhile (@head < savolen(@queue))
+        savovar @node = @queue[@head]
+        savovar @head = @head + 1
+        savoprint "bfs " + @node + "\n"
+        savovar @nbrs = @g[@node]
+        savovar @i = 0
+        savowhile (@i < savolen(@nbrs))
+            savovar @nb = @nbrs[@i]
+            savoif (@seen[@nb] == 0)
+                savoset @seen[@nb] = 1
+                savopush @queue @nb
+            savoend
+            savovar @i = @i + 1
+        savoend
+    savoend
+    savoreturn @head
+savoend
+
+savoprint "--- DFS from A ---\n"
+savovar @s1 = freshflags()
+savoprint "reached " + dfs(@g, "A", @s1) + " nodes\n"
+savoprint "--- BFS from A ---\n"
+savovar @s2 = freshflags()
+savoprint "queued " + bfs(@g, "A", @s2) + " nodes\n"
