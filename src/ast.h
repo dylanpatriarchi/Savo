@@ -28,7 +28,7 @@ typedef enum {
 } Builtin;
 
 typedef enum {
-    E_NUM, E_STR, E_VAR, E_BIN, E_NEG, E_NOT, E_CALL, E_CALLUSER
+    E_NUM, E_STR, E_VAR, E_BIN, E_NEG, E_NOT, E_CALL, E_CALLUSER, E_ARRAY, E_INDEX
 } ExprKind;
 
 typedef struct Expr {
@@ -41,6 +41,8 @@ typedef struct Expr {
         struct Expr *unary;                           /* E_NEG / E_NOT */
         struct { Builtin fn; struct Expr *a, *b; } call; /* E_CALL (b may be NULL) */
         struct { char *name; struct Expr **argv; int argc; } ucall; /* E_CALLUSER */
+        struct { struct Expr **items; int count; } list; /* E_ARRAY */
+        struct { struct Expr *base, *idx; } index;    /* E_INDEX */
     } as;
 } Expr;
 
@@ -58,6 +60,8 @@ Expr *expr_neg(Expr *e);
 Expr *expr_not(Expr *e);
 Expr *expr_call(Builtin fn, Expr *a, Expr *b);
 Expr *expr_calluser(char *name, Arg *args);    /* user function call */
+Expr *expr_array(Arg *items);                  /* array literal [ ... ] */
+Expr *expr_index(Expr *base, Expr *idx);       /* subscript base[idx] */
 
 Value eval_expr(const Expr *e);        /* caller owns the returned Value */
 void  free_expr(Expr *e);
@@ -78,6 +82,8 @@ typedef enum {
     S_WHILE,       /* savowhile (cond) ... savoend                         */
     S_FUNCDEF,     /* savodef name(params) ... savoend                     */
     S_RETURN,      /* savoreturn [expr]                                    */
+    S_PUSH,        /* savopush @a <expr>                                   */
+    S_SETINDEX,    /* savoset @a[i] = <expr>                               */
     S_DIR,         /* savodir / savols                                     */
     S_CLS, S_CLEAR, S_HELP, S_QUIT, S_POINTER
 } StmtKind;
@@ -113,6 +119,8 @@ Stmt *stmt_if(Expr *cond, Stmt *thenb, Stmt *elseb /*nullable*/);
 Stmt *stmt_while(Expr *cond, Stmt *body);
 Stmt *stmt_funcdef(char *name, Param *params, Stmt *body);
 Stmt *stmt_return(Expr *e /*nullable*/);
+Stmt *stmt_push(char *name, Expr *e);           /* savopush @a <expr> */
+Stmt *stmt_setindex(char *name, Expr *idx, Expr *e); /* savoset @a[i] = <expr> */
 
 /* Register a function definition (the interpreter keeps ownership). */
 void  func_define(Stmt *def);

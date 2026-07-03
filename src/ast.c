@@ -85,25 +85,45 @@ Expr *expr_call(Builtin fn, Expr *a, Expr *b) {
     return e;
 }
 
-Expr *expr_calluser(char *name, Arg *args) {
-    Expr *e = new_expr(E_CALLUSER);
+/* Flatten an Arg list into an Expr* array, freeing the Arg cells. */
+static Expr **args_to_array(Arg *args, int *out_n) {
     int n = 0, i = 0;
     Arg *a;
+    Expr **items;
     for (a = args; a != NULL; a = a->next) n++;
-    e->as.ucall.name = name;
-    e->as.ucall.argc = n;
-    e->as.ucall.argv = n ? xmalloc(sizeof(Expr *) * n) : NULL;
-    for (a = args; a != NULL; ) {   /* move each Expr into argv, free the Arg cells */
+    items = n ? xmalloc(sizeof(Expr *) * n) : NULL;
+    for (a = args; a != NULL; ) {
         Arg *next = a->next;
-        e->as.ucall.argv[i++] = a->e;
+        items[i++] = a->e;
         free(a);
         a = next;
     }
+    *out_n = n;
+    return items;
+}
+
+Expr *expr_calluser(char *name, Arg *args) {
+    Expr *e = new_expr(E_CALLUSER);
+    e->as.ucall.name = name;
+    e->as.ucall.argv = args_to_array(args, &e->as.ucall.argc);
     return e;
 }
 
-/* forward declaration: a call runs statements */
+Expr *expr_array(Arg *items) {
+    Expr *e = new_expr(E_ARRAY);
+    e->as.list.items = args_to_array(items, &e->as.list.count);
+    return e;
+}
+
+Expr *expr_index(Expr *base, Expr *idx) {
+    Expr *e = new_expr(E_INDEX);
+    e->as.index.base = base; e->as.index.idx = idx;
+    return e;
+}
+
+/* forward declarations */
 void exec_stmt(const Stmt *s);
+static double eval_num(const Expr *e);
 
 static Value call_user(const Expr *e) {
     Stmt *fn = func_lookup(e->as.ucall.name);
@@ -155,7 +175,7 @@ static Value call_builtin(Builtin fn, Value a, Value b) {
             if (hi < lo) { t = lo; lo = hi; hi = t; }
             return value_num(lo + rand() % (hi - lo + 1));
         }
-        case FN_LEN:   { char *s = value_to_string(a); double n = (double) strlen(s); free(s); return value_num(n); }
+        case FN_LEN:   { if (a.type == VAL_ARR) return value_num(array_length(a)); { char *s = value_to_string(a); double n = (double) strlen(s); free(s); return value_num(n); } }
         case FN_STR:   return value_str(value_to_string(a));
         case FN_NUM:   return value_num(value_to_number(a));
         case FN_UPPER: { char *s = value_to_string(a), *p; for (p = s; *p; p++) *p = (char) toupper((unsigned char) *p); return value_str(s); }
@@ -231,6 +251,29 @@ Value eval_expr(const Expr *e) {
             return res;
         }
         case E_CALLUSER: return call_user(e);
+        case E_ARRAY: {
+            Value arr = value_array();
+            int i;
+            for (i = 0; i < e->as.list.count; i++) {
+                Value el = eval_expr(e->as.list.items[i]);
+                array_push(arr, el);
+                value_free(el);
+            }
+            return arr;
+        }
+        case E_INDEX: {
+            Value base = eval_expr(e->as.index.base);
+            int i = (int) eval_num(e->as.index.idx);
+            Value res;
+            if (base.type == VAL_ARR) res = array_get(base, i);
+            else if (base.type == VAL_STR) {   /* string indexing -> 1-char string */
+                int len = (int) strlen(base.as.str);
+                if (i < 0 || i >= len) { runtime_error("string index out of range"); res = value_str_copy(""); }
+                else { char ch[2]; ch[0] = base.as.str[i]; ch[1] = 0; res = value_str_copy(ch); }
+            } else { runtime_error("indexing a non-array value"); res = value_num(0); }
+            value_free(base);
+            return res;
+        }
     }
     return value_num(0);
 }
@@ -251,6 +294,13 @@ void free_expr(Expr *e) {
             free(e->as.ucall.name);
             break;
         }
+        case E_ARRAY: {
+            int i;
+            for (i = 0; i < e->as.list.count; i++) free_expr(e->as.list.items[i]);
+            free(e->as.list.items);
+            break;
+        }
+        case E_INDEX:  free_expr(e->as.index.base); free_expr(e->as.index.idx); break;
         case E_NUM:    break;
     }
     free(e);
@@ -294,6 +344,8 @@ Stmt *stmt_pointer(char *str)       { Stmt *s = new_stmt(S_POINTER); s->str = st
 Stmt *stmt_if(Expr *cond, Stmt *thenb, Stmt *elseb) { Stmt *s = new_stmt(S_IF); s->a = cond; s->body = thenb; s->body2 = elseb; return s; }
 Stmt *stmt_while(Expr *cond, Stmt *body) { Stmt *s = new_stmt(S_WHILE); s->a = cond; s->body = body; return s; }
 Stmt *stmt_return(Expr *e) { Stmt *s = new_stmt(S_RETURN); s->a = e; return s; }
+Stmt *stmt_push(char *name, Expr *e) { Stmt *s = new_stmt(S_PUSH); s->str = name; s->a = e; return s; }
+Stmt *stmt_setindex(char *name, Expr *idx, Expr *e) { Stmt *s = new_stmt(S_SETINDEX); s->str = name; s->a = idx; s->b = e; return s; }
 Stmt *stmt_block_new(void) { return new_stmt(S_BLOCK); }
 
 void stmt_block_add(Stmt *block, Stmt *s) {
@@ -446,6 +498,20 @@ void exec_stmt(const Stmt *s) {
             g_return_value = s->a ? eval_expr(s->a) : value_num(0);
             g_returning = 1;
             break;
+        case S_PUSH: {
+            Value arr = symtab_get(s->str);   /* shares the array by reference */
+            if (arr.type != VAL_ARR) runtime_error("savopush on a non-array variable");
+            else { Value el = eval_expr(s->a); array_push(arr, el); value_free(el); }
+            value_free(arr);
+            break;
+        }
+        case S_SETINDEX: {
+            Value arr = symtab_get(s->str);
+            if (arr.type != VAL_ARR) runtime_error("savoset index on a non-array variable");
+            else { int i = (int) eval_num(s->a); Value el = eval_expr(s->b); array_set(arr, i, el); value_free(el); }
+            value_free(arr);
+            break;
+        }
         case S_DIR:
             if (interactive()) {
                 if (s->str) { char cmd[600]; snprintf(cmd, sizeof cmd, "ls %s", s->str); system(cmd); }

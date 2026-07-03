@@ -20,6 +20,7 @@
 %token VAR SQRT POW MAX MIN ABS RANDOM FLOOR CEIL ROUND LOG LOG10 DIVISION MOD LS
 %token LEN UPPER LOWER TOSTR TONUM
 %token OPENBRACKET CLOSEBRACKET COMMA EXIT NEWLINE ASSIGN SAVOEND SAVOELSE SAVODEF SAVORETURN
+%token LBRACKET RBRACKET PUSH SET
 %token EQUAL NOTEQUAL LT GT LE GE
 %token PLUS MINUS MULTIPLY DIVIDE PERCENT NEGATION
 %token <string>  STRING ARGUMENT IDENTIFIER
@@ -31,6 +32,7 @@
 %type <stmt> floorstmt ceilstmt roundstmt logstmt log10stmt randomstmt
 %type <stmt> ifstmt forstmt whilestmt dirstmt lsstmt pointerstmt
 %type <stmt> helpstmt quitstmt clsstmt clearstmt block funcdefstmt returnstmt
+%type <stmt> pushstmt setstmt
 %type <plist> paramlist paramnames
 %type <alist> arglist argvalues
 
@@ -40,10 +42,10 @@
 %right NEGATION
 %right UMINUS
 
-/* One expected shift/reduce conflict: an IDENTIFIER followed by '(' is a
- * function call rather than a variable next to a parenthesised expression.
- * Bison shifts (the call reading), which is what we want. */
-%expect 1
+/* Expected, benign shift/reduce conflicts (all resolved by shifting, which is
+ * what we want): a postfix '(' is a call and a postfix '[' is a subscript, each
+ * binding tighter than reducing the bare atom/identifier. */
+%expect 4
 
 %%
 
@@ -70,6 +72,7 @@ stmt:
     | pointerstmt | moltiplicationstmt | divisionstmt | modstmt | absstmt
     | randomstmt | floorstmt | ceilstmt | roundstmt | logstmt | log10stmt
     | ifstmt | sqrtstmt | powstmt | maxstmt | minstmt | returnstmt
+    | pushstmt | setstmt
     ;
 
 /* ------------------------------ expressions ------------------------------ */
@@ -94,6 +97,8 @@ atom:
     | STRING                          { $$ = expr_str($1); }
     | IDENTIFIER                      { $$ = expr_var($1); }
     | OPENBRACKET expr CLOSEBRACKET   { $$ = $2; }
+    | LBRACKET arglist RBRACKET       { $$ = expr_array($2); }        /* array literal */
+    | atom LBRACKET expr RBRACKET     { $$ = expr_index($1, $3); }    /* subscript */
     | MINUS atom %prec UMINUS         { $$ = expr_neg($2); }
     | NEGATION atom                   { $$ = expr_not($2); }
     | callexpr                        { $$ = $1; }
@@ -232,6 +237,14 @@ paramnames:
 returnstmt:
       SAVORETURN expr  { $$ = stmt_return($2); }
     | SAVORETURN       { $$ = stmt_return(NULL); }
+    ;
+
+pushstmt:
+    PUSH IDENTIFIER expr  { $$ = stmt_push($2, $3); }
+    ;
+
+setstmt:
+    SET IDENTIFIER LBRACKET expr RBRACKET ASSIGN expr  { $$ = stmt_setindex($2, $4, $7); }
     ;
 
 dirstmt:
