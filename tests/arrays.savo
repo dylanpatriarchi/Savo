@@ -1,0 +1,28 @@
+# arrays: literals, indexing, push, set, iteration, nesting, references
+savovar @a = [10, 20, 30]
+savoprint @a
+savoprint "len=" + savolen(@a) + "\n"
+savoprint "a[1]=" + @a[1] + "\n"
+savopush @a 40
+savopush @a (5 * 5)
+savoset @a[0] = 99
+savoprint @a
+
+# sum the elements
+savovar @i = 0
+savovar @total = 0
+savowhile (@i < savolen(@a))
+    savovar @total = @total + @a[@i]
+    savovar @i = @i + 1
+savoend
+savoprint "total=" + @total + "\n"
+
+# mixed and nested
+savovar @mix = [1, "two", [3, 4]]
+savoprint @mix
+savoprint "nested=" + @mix[2][1] + "\n"
+
+# arrays are shared by reference
+savovar @b = @a
+savopush @b 7
+savoprint "shared=" + savolen(@a) + "\n"
