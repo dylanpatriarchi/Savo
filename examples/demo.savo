@@ -16,6 +16,10 @@ savoprint "3. Math functions:\n"
 savosqrt 144
 savopow 2 10
 savoabs -17
+savofloor 3.7
+savoceil 3.2
+savoround 3.5
+savolog10 1000
 savomax @x @y
 savomin @x @y
 
@@ -36,7 +40,8 @@ savoif (@x >= 42)
 savoif (!0)
 savoif ("savo" == "savo")
 
-savoprint "7. Print with an appended value:\n"
+savoprint "7. Print values and variables:\n"
 savoprint "The answer is " + @x
+savoprint @sum
 
 savoprint "\n=== END OF TOUR ===\n"
