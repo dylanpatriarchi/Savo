@@ -28,7 +28,8 @@ typedef enum {
 } Builtin;
 
 typedef enum {
-    E_NUM, E_STR, E_VAR, E_BIN, E_NEG, E_NOT, E_CALL, E_CALLUSER, E_ARRAY, E_INDEX
+    E_NUM, E_STR, E_VAR, E_BIN, E_NEG, E_NOT, E_CALL, E_CALLUSER,
+    E_ARRAY, E_INDEX, E_OBJECT
 } ExprKind;
 
 typedef struct Expr {
@@ -42,15 +43,18 @@ typedef struct Expr {
         struct { Builtin fn; struct Expr *a, *b; } call; /* E_CALL (b may be NULL) */
         struct { char *name; struct Expr **argv; int argc; } ucall; /* E_CALLUSER */
         struct { struct Expr **items; int count; } list; /* E_ARRAY */
-        struct { struct Expr *base, *idx; } index;    /* E_INDEX */
+        struct { struct Expr *base, *idx; } index;    /* E_INDEX (array/string/object) */
+        struct { char **keys; struct Expr **vals; int count; } object; /* E_OBJECT */
     } as;
 } Expr;
 
-/* Builders for comma-separated parameter and argument lists. */
+/* Builders for comma-separated parameter / argument / key-value lists. */
 typedef struct Param { char *name; struct Param *next; } Param;
 typedef struct Arg   { Expr *e;    struct Arg   *next; } Arg;
+typedef struct Pair  { char *key;  Expr *val; struct Pair *next; } Pair;
 Param *param_add(Param *list, char *name);   /* append name, return head */
 Arg   *arg_add(Arg *list, Expr *e);          /* append e, return head */
+Pair  *pair_add(Pair *list, char *key, Expr *val); /* append key:val, return head */
 
 Expr *expr_num(double v);
 Expr *expr_str(char *owned);           /* takes ownership of the literal */
@@ -61,7 +65,8 @@ Expr *expr_not(Expr *e);
 Expr *expr_call(Builtin fn, Expr *a, Expr *b);
 Expr *expr_calluser(char *name, Arg *args);    /* user function call */
 Expr *expr_array(Arg *items);                  /* array literal [ ... ] */
-Expr *expr_index(Expr *base, Expr *idx);       /* subscript base[idx] */
+Expr *expr_index(Expr *base, Expr *idx);       /* subscript base[idx] / base.key */
+Expr *expr_object(Pair *pairs);                /* object literal { k: v, ... } */
 
 Value eval_expr(const Expr *e);        /* caller owns the returned Value */
 void  free_expr(Expr *e);

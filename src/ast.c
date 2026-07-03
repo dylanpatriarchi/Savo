@@ -59,6 +59,15 @@ Arg *arg_add(Arg *list, Expr *e) {
     return list;
 }
 
+Pair *pair_add(Pair *list, char *key, Expr *val) {
+    Pair *p = xmalloc(sizeof(Pair)), *tail;
+    p->key = key; p->val = val; p->next = NULL;
+    if (list == NULL) return p;
+    for (tail = list; tail->next; tail = tail->next) ;
+    tail->next = p;
+    return list;
+}
+
 /* ============================ expressions ============================ */
 
 static Expr *new_expr(ExprKind kind) {
@@ -121,6 +130,25 @@ Expr *expr_index(Expr *base, Expr *idx) {
     return e;
 }
 
+Expr *expr_object(Pair *pairs) {
+    Expr *e = new_expr(E_OBJECT);
+    int n = 0, i = 0;
+    Pair *p;
+    for (p = pairs; p != NULL; p = p->next) n++;
+    e->as.object.count = n;
+    e->as.object.keys = n ? xmalloc(sizeof(char *) * n) : NULL;
+    e->as.object.vals = n ? xmalloc(sizeof(Expr *) * n) : NULL;
+    for (p = pairs; p != NULL; ) {
+        Pair *next = p->next;
+        e->as.object.keys[i] = p->key;
+        e->as.object.vals[i] = p->val;
+        i++;
+        free(p);
+        p = next;
+    }
+    return e;
+}
+
 /* forward declarations */
 void exec_stmt(const Stmt *s);
 static double eval_num(const Expr *e);
@@ -175,7 +203,7 @@ static Value call_builtin(Builtin fn, Value a, Value b) {
             if (hi < lo) { t = lo; lo = hi; hi = t; }
             return value_num(lo + rand() % (hi - lo + 1));
         }
-        case FN_LEN:   { if (a.type == VAL_ARR) return value_num(array_length(a)); { char *s = value_to_string(a); double n = (double) strlen(s); free(s); return value_num(n); } }
+        case FN_LEN:   { if (a.type == VAL_ARR) return value_num(array_length(a)); if (a.type == VAL_OBJ) return value_num(object_length(a)); { char *s = value_to_string(a); double n = (double) strlen(s); free(s); return value_num(n); } }
         case FN_STR:   return value_str(value_to_string(a));
         case FN_NUM:   return value_num(value_to_number(a));
         case FN_UPPER: { char *s = value_to_string(a), *p; for (p = s; *p; p++) *p = (char) toupper((unsigned char) *p); return value_str(s); }
@@ -263,16 +291,32 @@ Value eval_expr(const Expr *e) {
         }
         case E_INDEX: {
             Value base = eval_expr(e->as.index.base);
-            int i = (int) eval_num(e->as.index.idx);
             Value res;
-            if (base.type == VAL_ARR) res = array_get(base, i);
-            else if (base.type == VAL_STR) {   /* string indexing -> 1-char string */
+            if (base.type == VAL_OBJ) {          /* object: key is a string */
+                Value k = eval_expr(e->as.index.idx);
+                char *key = value_to_string(k);
+                res = object_get(base, key);
+                free(key); value_free(k);
+            } else if (base.type == VAL_ARR) {
+                res = array_get(base, (int) eval_num(e->as.index.idx));
+            } else if (base.type == VAL_STR) {   /* string indexing -> 1-char string */
+                int i = (int) eval_num(e->as.index.idx);
                 int len = (int) strlen(base.as.str);
                 if (i < 0 || i >= len) { runtime_error("string index out of range"); res = value_str_copy(""); }
                 else { char ch[2]; ch[0] = base.as.str[i]; ch[1] = 0; res = value_str_copy(ch); }
-            } else { runtime_error("indexing a non-array value"); res = value_num(0); }
+            } else { runtime_error("indexing a non-collection value"); res = value_num(0); }
             value_free(base);
             return res;
+        }
+        case E_OBJECT: {
+            Value obj = value_object();
+            int i;
+            for (i = 0; i < e->as.object.count; i++) {
+                Value v = eval_expr(e->as.object.vals[i]);
+                object_set(obj, e->as.object.keys[i], v);
+                value_free(v);
+            }
+            return obj;
         }
     }
     return value_num(0);
@@ -301,6 +345,13 @@ void free_expr(Expr *e) {
             break;
         }
         case E_INDEX:  free_expr(e->as.index.base); free_expr(e->as.index.idx); break;
+        case E_OBJECT: {
+            int i;
+            for (i = 0; i < e->as.object.count; i++) { free(e->as.object.keys[i]); free_expr(e->as.object.vals[i]); }
+            free(e->as.object.keys);
+            free(e->as.object.vals);
+            break;
+        }
         case E_NUM:    break;
     }
     free(e);
@@ -506,10 +557,20 @@ void exec_stmt(const Stmt *s) {
             break;
         }
         case S_SETINDEX: {
-            Value arr = symtab_get(s->str);
-            if (arr.type != VAL_ARR) runtime_error("savoset index on a non-array variable");
-            else { int i = (int) eval_num(s->a); Value el = eval_expr(s->b); array_set(arr, i, el); value_free(el); }
-            value_free(arr);
+            Value container = symtab_get(s->str);
+            Value el = eval_expr(s->b);
+            if (container.type == VAL_OBJ) {
+                Value k = eval_expr(s->a);
+                char *key = value_to_string(k);
+                object_set(container, key, el);
+                free(key); value_free(k);
+            } else if (container.type == VAL_ARR) {
+                array_set(container, (int) eval_num(s->a), el);
+            } else {
+                runtime_error("savoset on a value that is not an array or object");
+            }
+            value_free(el);
+            value_free(container);
             break;
         }
         case S_DIR:
