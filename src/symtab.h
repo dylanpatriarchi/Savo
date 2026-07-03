@@ -2,26 +2,31 @@
 #define SYMTAB_H
 
 /*
- * Minimal symbol table for Savo variables.
+ * Symbol table for Savo variables, organised as a stack of scopes.
+ *
+ * The bottom scope is global. A function call pushes a fresh scope for its
+ * parameters and locals and pops it on return. Lookups search from the current
+ * scope outward to the global one, so functions can read globals; assignments
+ * always write to the current scope, so a local never clobbers a global.
  *
  * Variables hold a single floating-point value and are addressed by name
- * (e.g. "@x"). Names are copied internally, so callers keep ownership of the
- * strings they pass in.
+ * (e.g. "@x"). Names are copied internally, so callers keep ownership.
  */
 
-/* Create or update the variable `name` with `value`. */
+/* Create or update `name` in the current scope. */
 void symtab_set(const char *name, float value);
 
-/*
- * Return the value bound to `name`. If the variable is undefined a warning is
- * printed to stderr and 0 is returned, so scripts keep running.
- */
+/* Value bound to `name`, searching outward; warns and returns 0 if undefined. */
 float symtab_get(const char *name);
 
-/* Return 1 if `name` is defined, 0 otherwise. */
+/* 1 if `name` is visible from the current scope, 0 otherwise. */
 int symtab_has(const char *name);
 
-/* Release all memory held by the table (mostly useful for a clean shutdown). */
+/* Enter / leave a local scope (used around a function body). */
+void symtab_push_scope(void);
+void symtab_pop_scope(void);
+
+/* Release every scope's memory (clean shutdown). */
 void symtab_free(void);
 
 #endif
