@@ -18,6 +18,7 @@
 
 %token DIR HELP PRINT QUIT CLEAR CLS FOR WHILE SUM SUBTRACT POINTERCELL MOLTIPLICATION IF
 %token VAR SQRT POW MAX MIN ABS RANDOM FLOOR CEIL ROUND LOG LOG10 DIVISION MOD LS
+%token LEN UPPER LOWER TOSTR TONUM
 %token OPENBRACKET CLOSEBRACKET COMMA EXIT NEWLINE ASSIGN SAVOEND SAVOELSE SAVODEF SAVORETURN
 %token EQUAL NOTEQUAL LT GT LE GE
 %token PLUS MINUS MULTIPLY DIVIDE PERCENT NEGATION
@@ -90,6 +91,7 @@ expr:
 
 atom:
       NUMBER                          { $$ = expr_num($1); }
+    | STRING                          { $$ = expr_str($1); }
     | IDENTIFIER                      { $$ = expr_var($1); }
     | OPENBRACKET expr CLOSEBRACKET   { $$ = $2; }
     | MINUS atom %prec UMINUS         { $$ = expr_neg($2); }
@@ -110,6 +112,11 @@ callexpr:
     | MAX   OPENBRACKET expr COMMA expr CLOSEBRACKET    { $$ = expr_call(FN_MAX, $3, $5); }
     | MIN   OPENBRACKET expr COMMA expr CLOSEBRACKET    { $$ = expr_call(FN_MIN, $3, $5); }
     | RANDOM OPENBRACKET expr COMMA expr CLOSEBRACKET   { $$ = expr_call(FN_RANDOM, $3, $5); }
+    | LEN   OPENBRACKET expr CLOSEBRACKET               { $$ = expr_call(FN_LEN, $3, NULL); }
+    | UPPER OPENBRACKET expr CLOSEBRACKET               { $$ = expr_call(FN_UPPER, $3, NULL); }
+    | LOWER OPENBRACKET expr CLOSEBRACKET               { $$ = expr_call(FN_LOWER, $3, NULL); }
+    | TOSTR OPENBRACKET expr CLOSEBRACKET               { $$ = expr_call(FN_STR, $3, NULL); }
+    | TONUM OPENBRACKET expr CLOSEBRACKET               { $$ = expr_call(FN_NUM, $3, NULL); }
     | IDENTIFIER OPENBRACKET arglist CLOSEBRACKET       { $$ = expr_calluser($1, $3); }
     ;
 
@@ -130,19 +137,16 @@ count:
     | IDENTIFIER  { $$ = expr_var($1); }
     ;
 
-/* A condition: a numeric expression (truthy) or a string comparison. */
+/* A condition is any expression: truthy when non-zero / a non-empty string.
+ * String comparisons like "a" == "b" fall out of the expression grammar. */
 ifcond:
       expr                          { $$ = $1; }
-    | STRING EQUAL STRING           { $$ = expr_strcmp(0, $1, $3); }
-    | STRING NOTEQUAL STRING        { $$ = expr_strcmp(1, $1, $3); }
     ;
 
 /* ------------------------------ statements ------------------------------ */
 
 printstmt:
-      PRINT STRING                  { $$ = stmt_print_str($2, NULL); }
-    | PRINT STRING PLUS expr        { $$ = stmt_print_str($2, $4); }
-    | PRINT expr                    { $$ = stmt_print_expr($2); }
+      PRINT expr                    { $$ = stmt_print_expr($2); }
     ;
 
 varstmt:

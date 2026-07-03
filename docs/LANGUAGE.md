@@ -10,6 +10,7 @@ all valid).
 - [Lexical elements](#lexical-elements)
 - [Values and variables](#values-and-variables)
 - [Expressions](#expressions)
+- [Strings](#strings)
 - [Output](#output)
 - [Arithmetic](#arithmetic)
 - [Math functions](#math-functions)
@@ -33,8 +34,9 @@ Whitespace and blank lines are insignificant.
 
 ## Values and variables
 
-Variables are created and updated with `savovar` and hold a single
-floating-point number. There are two forms:
+Savo values are **dynamically typed**: a variable holds either a number or a
+string, and the type is decided at run time. Variables are created and updated
+with `savovar`, which has two forms:
 
 ```savo
 savovar @x 10          # define/echo:  prints "Variabile @x = 10.00"
@@ -72,16 +74,62 @@ Built-in functions usable in expressions: `savosqrt`, `savoabs`, `savofloor`,
 `savopow`, `savomax`, `savomin`, `savorandom` (two arguments), e.g.
 `savomax(@a, @b)`.
 
-## Output
+## Strings
+
+String literals are double-quoted and support `\n \t \r \\ \"` escapes. Strings
+are first-class values: store them in variables, compare them, pass them to
+functions and return them.
+
+The `+` operator **concatenates** whenever either side is a string; numbers are
+converted to text automatically:
 
 ```savo
-savoprint "hello world\n"          # print a string literal
-savoprint "score: " + @x           # print a string followed by a value
-savoprint @x                       # print a number or variable directly
+savovar @name = "Savo"
+savoprint "Hello, " + @name + "!\n"     # Hello, Savo!
+savoprint "x = " + 42 + "\n"            # x = 42.00
 ```
 
-In interactive mode `savoprint` appends a newline automatically; when running a
-file it does not, so add `\n` yourself where you want line breaks.
+Comparisons work on strings too — `==`/`!=` test equality and `< > <= >=` use
+lexicographic order:
+
+```savo
+savoif ("apple" < "banana")
+    savoprint "apple comes first\n"
+savoend
+```
+
+String functions:
+
+| Function | Result |
+|----------|--------|
+| `savolen(s)`   | length of `s` |
+| `savoupper(s)` | uppercase copy |
+| `savolower(s)` | lowercase copy |
+| `savostr(n)`   | number → string |
+| `savonum(s)`   | string → number |
+
+```savo
+savoprint savoupper("hi " + @name) + "\n"        # HI SAVO
+savovar @total = savonum("40") + 2               # 42  (numeric)
+```
+
+> Printing a **string** writes it verbatim (you control newlines with `\n`),
+> while printing a **number** appends a newline for convenience. So a line built
+> by concatenation, like `savoprint "n = " + @n`, should end with `+ "\n"`.
+
+## Output
+
+`savoprint` takes one expression and prints its value:
+
+```savo
+savoprint "hello world\n"          # a string literal (newline via \n)
+savoprint "score: " + @x + "\n"    # a concatenated string
+savoprint @x                       # a number
+```
+
+Printing a **number** appends a newline. Printing a **string** writes it
+verbatim, so include `\n` where you want line breaks (in the REPL a newline is
+added for convenience).
 
 ## Arithmetic
 
@@ -243,8 +291,10 @@ terminal it runs the interactive REPL with the banner and `>>>` prompt.
 
 | Command | Arguments | Effect |
 |---------|-----------|--------|
-| `savoprint` | `<"string">`, `<expr>`, or `<"string"> + <expr>` | Print a string and/or a value |
+| `savoprint` | `<expr>` | Print a value (string or number) |
 | `savovar` | `<@name> <expr>` (echo) or `<@name> = <expr>` (silent) | Define or update a variable |
+| `savolen` / `savoupper` / `savolower` | `(<expr>)` | String length / upper / lower |
+| `savostr` / `savonum` | `(<expr>)` | Convert number↔string |
 | `savosum` | `<value> <value>` | Add |
 | `savosubtract` | `<value> <value>` | Subtract |
 | `savomoltiplication` | `<value> <value>` | Multiply |

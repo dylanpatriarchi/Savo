@@ -1,6 +1,8 @@
 #ifndef AST_H
 #define AST_H
 
+#include "value.h"
+
 /*
  * Abstract syntax tree for Savo.
  *
@@ -8,10 +10,10 @@
  * Each top-level statement is executed (exec_stmt) and freed (free_stmt) as
  * soon as it is fully parsed, which keeps the REPL responsive while still
  * allowing compound statements (blocks, loops, functions) to be captured and
- * run as a unit.
+ * run as a unit. Expressions evaluate to a dynamically-typed Value.
  */
 
-/* ---------- expressions (numeric) ---------- */
+/* ---------- expressions ---------- */
 
 typedef enum {
     OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_MOD,
@@ -20,23 +22,24 @@ typedef enum {
 
 /* Built-in functions usable both as commands and inside expressions. */
 typedef enum {
-    FN_SQRT, FN_ABS, FN_FLOOR, FN_CEIL, FN_ROUND, FN_LOG, FN_LOG10, /* unary  */
-    FN_POW, FN_MAX, FN_MIN, FN_RANDOM                                /* binary */
+    FN_SQRT, FN_ABS, FN_FLOOR, FN_CEIL, FN_ROUND, FN_LOG, FN_LOG10, /* num, unary  */
+    FN_POW, FN_MAX, FN_MIN, FN_RANDOM,                              /* num, binary */
+    FN_LEN, FN_UPPER, FN_LOWER, FN_STR, FN_NUM                      /* string ops  */
 } Builtin;
 
 typedef enum {
-    E_NUM, E_VAR, E_BIN, E_NEG, E_NOT, E_CALL, E_STRCMP, E_CALLUSER
+    E_NUM, E_STR, E_VAR, E_BIN, E_NEG, E_NOT, E_CALL, E_CALLUSER
 } ExprKind;
 
 typedef struct Expr {
     ExprKind kind;
     union {
-        float  num;                                   /* E_NUM  */
+        double num;                                   /* E_NUM  */
+        char  *str;                                   /* E_STR (owned literal) */
         char  *var;                                   /* E_VAR  */
         struct { BinOp op; struct Expr *l, *r; } bin; /* E_BIN  */
         struct Expr *unary;                           /* E_NEG / E_NOT */
         struct { Builtin fn; struct Expr *a, *b; } call; /* E_CALL (b may be NULL) */
-        struct { int ne; char *a, *b; } strcmp;       /* E_STRCMP (ne = != when 1) */
         struct { char *name; struct Expr **argv; int argc; } ucall; /* E_CALLUSER */
     } as;
 } Expr;
@@ -47,23 +50,22 @@ typedef struct Arg   { Expr *e;    struct Arg   *next; } Arg;
 Param *param_add(Param *list, char *name);   /* append name, return head */
 Arg   *arg_add(Arg *list, Expr *e);          /* append e, return head */
 
-Expr *expr_num(float v);
+Expr *expr_num(double v);
+Expr *expr_str(char *owned);           /* takes ownership of the literal */
 Expr *expr_var(char *name);            /* takes ownership of name */
 Expr *expr_bin(BinOp op, Expr *l, Expr *r);
 Expr *expr_neg(Expr *e);
 Expr *expr_not(Expr *e);
 Expr *expr_call(Builtin fn, Expr *a, Expr *b);
-Expr *expr_strcmp(int ne, char *a, char *b);   /* takes ownership of a and b */
 Expr *expr_calluser(char *name, Arg *args);    /* user function call */
 
-float eval_expr(const Expr *e);
+Value eval_expr(const Expr *e);        /* caller owns the returned Value */
 void  free_expr(Expr *e);
 
 /* ---------- statements ---------- */
 
 typedef enum {
-    S_PRINT_STR,   /* print a string, with an optional trailing value      */
-    S_PRINT_EXPR,  /* print a numeric value                                */
+    S_PRINT_EXPR,  /* print the value of an expression                     */
     S_ASSIGN,      /* savovar: define/update a variable (flag = echo)      */
     S_ARITH,       /* savosum/subtract/moltiplication/divide/mod           */
     S_MATH1,       /* unary math command (sqrt/abs/floor/ceil/round/log..) */
@@ -103,7 +105,6 @@ typedef struct Stmt {
     int          nparams; /* S_FUNCDEF parameter count */
 } Stmt;
 
-Stmt *stmt_print_str(char *s, Expr *trailing /*nullable*/);
 Stmt *stmt_print_expr(Expr *e);
 Stmt *stmt_assign(char *name, Expr *e, int echo);
 Stmt *stmt_block_new(void);

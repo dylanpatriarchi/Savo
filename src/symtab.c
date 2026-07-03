@@ -5,7 +5,7 @@
 
 typedef struct Symbol {
     char           *name;
-    float           value;
+    Value           value;
     struct Symbol  *next;
 } Symbol;
 
@@ -31,27 +31,31 @@ static Symbol *find_local(Scope *scope, const char *name) {
     return NULL;
 }
 
-void symtab_set(const char *name, float value) {
+void symtab_set(const char *name, Value v) {
     Symbol *s = find_local(current, name);
-    if (s != NULL) { s->value = value; return; }
+    if (s != NULL) {
+        value_free(s->value);
+        s->value = value_copy(v);
+        return;
+    }
 
     s = malloc(sizeof(Symbol));
     if (s == NULL) oom(name);
     s->name = strdup(name);
     if (s->name == NULL) oom(name);
-    s->value = value;
+    s->value = value_copy(v);
     s->next = current->head;
     current->head = s;
 }
 
-float symtab_get(const char *name) {
+Value symtab_get(const char *name) {
     Scope *scope;
     for (scope = current; scope != NULL; scope = scope->parent) {
         Symbol *s = find_local(scope, name);
-        if (s != NULL) return s->value;
+        if (s != NULL) return value_copy(s->value);
     }
     fprintf(stderr, "savo: undefined variable '%s' (using 0)\n", name);
-    return 0.0f;
+    return value_num(0);
 }
 
 int symtab_has(const char *name) {
@@ -73,6 +77,7 @@ static void free_symbols(Scope *scope) {
     Symbol *s = scope->head;
     while (s != NULL) {
         Symbol *next = s->next;
+        value_free(s->value);
         free(s->name);
         free(s);
         s = next;
