@@ -1,0 +1,9 @@
+# infix expressions with precedence, parentheses and nested function calls
+savovar @x = 20
+savosum (@x / 2) 5
+savosubtract (2 * 3) 1
+savomoltiplication (1 + 2) (3 + 1)
+savopow 2 (1 + 2)
+savosqrt (@x * 5)
+savomax (3 + 1) (10 - 8)
+savodivide (100 % 30) 2
