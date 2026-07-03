@@ -47,4 +47,17 @@ savowhile (@n > 1)
 savoend
 savoprint "5! = " + @f
 
+savoprint "8. User-defined functions (with recursion):\n"
+savodef square(@n)
+    savoreturn @n * @n
+savoend
+savodef fib(@n)
+    savoif (@n < 2)
+        savoreturn @n
+    savoend
+    savoreturn fib(@n - 1) + fib(@n - 2)
+savoend
+savoprint "square(9) = " + square(9)
+savoprint "fib(10) = " + fib(10)
+
 savoprint "\n=== END OF TOUR ===\n"
