@@ -59,6 +59,7 @@ its line number and the interpreter keeps going with the next line.
 | Arithmetic  | `savosum`, `savosubtract`, `savomoltiplication`, `savodivide`, `savomod` |
 | Math        | `savosqrt`, `savopow`, `savoabs`, `savofloor`, `savoceil`, `savoround`, `savolog`, `savolog10`, `savomax`, `savomin`, `savorandom` |
 | Control     | `savoif`/`savoelse`/`savoend`, `savowhile`, `savofor` |
+| Functions   | `savodef`/`savoreturn` |
 | Console     | `savodir`, `savols`, `savocls`, `savoclear`, `savopointercell`, `savohelp`, `savoquit`, `savoexit` |
 
 Anywhere a number is expected you can write a full **expression**: `+ - * / %`,
@@ -73,25 +74,26 @@ savovar @x = (3 + 4) * 2      # expressions with precedence -> 14
 savoprint "x = " + @x
 savorandom 1 6                # roll a die
 
-savovar @n = 5                # while loop: factorial of 5
-savovar @f = 1
-savowhile (@n > 1)
-    savovar @f = @f * @n
-    savovar @n = @n - 1
+savodef fact(@n)              # recursive function
+    savoif (@n <= 1)
+        savoreturn 1
+    savoend
+    savoreturn @n * fact(@n - 1)
 savoend
-savoprint "5! = " + @f        # 120.00
+savoprint "5! = " + fact(5)   # 120.00
 ```
 
 ## Project layout
 
 ```
 src/               language sources
-├── lexer.l        Flex lexer (tokens, escapes, entry point)
-├── parser.y       Bison grammar and command semantics
-├── symtab.c/.h    variable storage
-├── global.c/.h    shared runtime state
-└── statements/    print / for / while helpers
+├── lexer.l        Flex lexer (tokens, escapes, CLI entry point)
+├── parser.y       Bison grammar that builds the AST
+├── ast.c/.h       AST nodes + tree-walking interpreter
+├── symtab.c/.h    scoped variable storage
+└── global.c/.h    shared runtime state
 examples/          runnable .savo scripts
+tests/             golden-file test suite (make test)
 docs/              language reference
 Makefile           build system
 ```

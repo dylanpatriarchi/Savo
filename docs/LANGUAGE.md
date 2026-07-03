@@ -14,6 +14,7 @@ all valid).
 - [Arithmetic](#arithmetic)
 - [Math functions](#math-functions)
 - [Control flow](#control-flow)
+- [Functions](#functions)
 - [Console commands](#console-commands)
 - [Command-line interface](#command-line-interface)
 - [Error handling](#error-handling)
@@ -172,7 +173,36 @@ savofor (1, 4, 1) "double: " * 2     # append counter * 2
 
 Loop bounds accept variables too: `savofor (1, @n, 1) "..."`.
 
-## Console commands
+## Functions
+
+Define a function with `savodef name(params) ... savoend` and return a value
+with `savoreturn`. A function call is an expression, so it can appear anywhere a
+value is expected.
+
+```savo
+savodef square(@n)
+    savoreturn @n * @n
+savoend
+
+savodef fact(@n)
+    savoif (@n <= 1)
+        savoreturn 1
+    savoend
+    savoreturn @n * fact(@n - 1)      # recursion is supported
+savoend
+
+savoprint square(7)          # 49.00
+savoprint fact(5)            # 120.00
+savoprint square(fact(3))    # nested calls -> 36.00
+```
+
+Each call runs in its own **local scope**: parameters and any variables assigned
+inside the body are local and disappear when the function returns. Functions can
+still *read* global variables, but assigning to a name inside a function creates
+a local that shadows the global rather than overwriting it.
+
+`savoreturn` with no expression returns `0`. A function that never calls
+`savoreturn` also yields `0`.
 
 ```savo
 savodir             # list files in the current directory (alias: savols)
@@ -233,6 +263,8 @@ terminal it runs the interactive REPL with the banner and `>>>` prompt.
 | `savorandom` | `<min> <max>` | Random integer in range |
 | `savoif` | `(<cond>) … [savoelse …] savoend` | Conditional block |
 | `savowhile` | `(<cond>) … savoend` | While loop |
+| `savodef` | `name(<@params>) … savoend` | Define a function |
+| `savoreturn` | `[<expr>]` | Return a value from a function |
 | `savofor` | `<count> <"str">` or `(a,b,s) <"str">` | Repeat / counted loop |
 | `savowhile` | `<count> <"str">` | Bounded repeat (count form) |
 | `savodir` / `savols` | `[argument]` | List files |

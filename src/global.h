@@ -1,7 +1,7 @@
 #ifndef GLOBAL_H
 #define GLOBAL_H
 
-#define SAVO_VERSION "3.0.0"
+#define SAVO_VERSION "3.1.0"
 
 /* Runtime prompt shown in interactive mode; empty string when running a file. */
 extern char *prompt;
