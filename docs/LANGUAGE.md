@@ -9,6 +9,7 @@ all valid).
 
 - [Lexical elements](#lexical-elements)
 - [Values and variables](#values-and-variables)
+- [Expressions](#expressions)
 - [Output](#output)
 - [Arithmetic](#arithmetic)
 - [Math functions](#math-functions)
@@ -31,19 +32,44 @@ Whitespace and blank lines are insignificant.
 
 ## Values and variables
 
-A **value** is anywhere Savo expects a number: it is either a number literal or
-a variable reference. Variables are created and updated with `savovar` and hold
-a single floating-point number.
+Variables are created and updated with `savovar` and hold a single
+floating-point number. There are two forms:
 
 ```savo
-savovar @x 10          # define @x = 10
-savovar @x 25          # reassign @x = 25
-savovar @y @x          # copy: @y = 25
-savosum @x @y          # -> 50.00
+savovar @x 10          # define/echo:  prints "Variabile @x = 10.00"
+savovar @y = @x * 2    # assign/silent: no output — ideal inside loops
 ```
+
+The bare form (no `=`) echoes the assignment, which is handy in the REPL. The
+`=` form is silent. The right-hand side of either form is a full
+[expression](#expressions).
 
 Referencing an undefined variable prints a warning to stderr and evaluates to
 `0`, so a script keeps running rather than crashing.
+
+## Expressions
+
+Anywhere Savo expects a number you can write a full expression: number
+literals, variables, the operators `+ - * / %`, the comparisons
+`== != < > <= >=`, logical negation `!`, parentheses, and calls to the built-in
+functions.
+
+```savo
+savovar @z = (@x + 2) * 3 - 1
+savoprint 10 - 2 * 3                 # 4.00   (precedence: * before -)
+savoprint (10 - 2) * 3              # 24.00
+savoprint -5 + 8                    # 3.00   (unary minus)
+savovar @h = savosqrt(3 * 3 + 4 * 4)   # nested function call -> 5
+savoprint savopow(2, 10) + 1        # 1025.00
+```
+
+Operator precedence, from lowest to highest: comparisons; `+` `-`; `*` `/` `%`;
+then unary `-` and `!`. Comparisons evaluate to `1` (true) or `0` (false).
+
+Built-in functions usable in expressions: `savosqrt`, `savoabs`, `savofloor`,
+`savoceil`, `savoround`, `savolog`, `savolog10` (one argument), and
+`savopow`, `savomax`, `savomin`, `savorandom` (two arguments), e.g.
+`savomax(@a, @b)`.
 
 ## Output
 
@@ -95,24 +121,45 @@ works too.
 
 ### Conditionals
 
-`savoif` evaluates a condition and prints `true` or `false`.
+`savoif` runs a block of statements when a condition is true, with an optional
+`savoelse` branch, and is closed by `savoend`:
 
 ```savo
-savoif (10 == 10)          # true
-savoif (@x != 0)           # compare with a variable
-savoif (5 < 8)             # < > <= >= == != are all supported
-savoif (@x)                # truthy test: true when @x != 0
-savoif (!0)                # negation: true when the value is 0
-savoif ("savo" == "savo")  # string equality (== and !=)
+savoif (@x > 10)
+    savoprint "big\n"
+savoelse
+    savoprint "small\n"
+savoend
 ```
 
-### Loops
+The condition is any [expression](#expressions) (true when non-zero) or a string
+comparison (`"a" == "b"`, `"a" != "b"`). Blocks may be nested.
 
-Repeat a string a fixed number of times:
+### While loops
+
+`savowhile (cond) ... savoend` re-evaluates the condition before every
+iteration:
+
+```savo
+savovar @n = 5
+savovar @f = 1
+savowhile (@n > 1)
+    savovar @f = @f * @n
+    savovar @n = @n - 1
+savoend
+savoprint "5! = " + @f      # 120.00
+```
+
+> A `savowhile` block loops as long as the condition holds — an always-true
+> condition loops forever, exactly like a real `while`.
+
+### Repeat loops
+
+For simply repeating a string a fixed number of times:
 
 ```savo
 savofor 3 "hi"      # prints hi three times
-savowhile 3 "hi"    # same, bounded repeat
+savowhile 3 "hi"    # same, bounded repeat (count form)
 ```
 
 C-style counted loop `(start, end, step)` — iterates while `i < end`:
@@ -166,8 +213,8 @@ terminal it runs the interactive REPL with the banner and `>>>` prompt.
 
 | Command | Arguments | Effect |
 |---------|-----------|--------|
-| `savoprint` | `<"string">`, `<value>`, or `<"string"> + <value>` | Print a string and/or a value |
-| `savovar` | `<@name> <value>` | Define or update a variable |
+| `savoprint` | `<"string">`, `<expr>`, or `<"string"> + <expr>` | Print a string and/or a value |
+| `savovar` | `<@name> <expr>` (echo) or `<@name> = <expr>` (silent) | Define or update a variable |
 | `savosum` | `<value> <value>` | Add |
 | `savosubtract` | `<value> <value>` | Subtract |
 | `savomoltiplication` | `<value> <value>` | Multiply |
@@ -184,9 +231,10 @@ terminal it runs the interactive REPL with the banner and `>>>` prompt.
 | `savomax` | `<value> <value>` | Maximum |
 | `savomin` | `<value> <value>` | Minimum |
 | `savorandom` | `<min> <max>` | Random integer in range |
-| `savoif` | `(<condition>)` | Compare / test, prints `true`/`false` |
+| `savoif` | `(<cond>) … [savoelse …] savoend` | Conditional block |
+| `savowhile` | `(<cond>) … savoend` | While loop |
 | `savofor` | `<count> <"str">` or `(a,b,s) <"str">` | Repeat / counted loop |
-| `savowhile` | `<count> <"str">` | Bounded repeat |
+| `savowhile` | `<count> <"str">` | Bounded repeat (count form) |
 | `savodir` / `savols` | `[argument]` | List files |
 | `savocls` / `savoclear` | — | Clear screen |
 | `savopointercell` | `<"string">` | Print a memory address |

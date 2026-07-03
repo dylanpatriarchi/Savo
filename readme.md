@@ -6,14 +6,16 @@ with `savo` — `savoprint`, `savosum`, `savoif`, and so on — which makes shor
 scripts read almost like plain english.
 
 ```savo
-savovar @answer 42
+savovar @answer = 6 * 7
 savoprint "The answer is " + @answer
 savoif (@answer == 42)
+    savoprint "correct!\n"
+savoend
 ```
 
 ```
 The answer is 42.00
-true
+correct!
 ```
 
 ## Build
@@ -56,23 +58,28 @@ its line number and the interpreter keeps going with the next line.
 | Variables   | `savovar` |
 | Arithmetic  | `savosum`, `savosubtract`, `savomoltiplication`, `savodivide`, `savomod` |
 | Math        | `savosqrt`, `savopow`, `savoabs`, `savofloor`, `savoceil`, `savoround`, `savolog`, `savolog10`, `savomax`, `savomin`, `savorandom` |
-| Control     | `savoif`, `savofor`, `savowhile` |
+| Control     | `savoif`/`savoelse`/`savoend`, `savowhile`, `savofor` |
 | Console     | `savodir`, `savols`, `savocls`, `savoclear`, `savopointercell`, `savohelp`, `savoquit`, `savoexit` |
 
-Any command that takes a **value** accepts either a number literal (including
-negatives, e.g. `-17`) or a variable such as `@x`. See
-[`docs/LANGUAGE.md`](docs/LANGUAGE.md) for the complete reference and more
-examples.
+Anywhere a number is expected you can write a full **expression**: `+ - * / %`,
+comparisons, `!`, parentheses and nested function calls such as
+`savosqrt(@x * @x + 9)`. See [`docs/LANGUAGE.md`](docs/LANGUAGE.md) for the
+complete reference.
 
 ### A quick tour
 
 ```savo
-savovar @x 10           # define a variable
-savosum @x 5            # -> 15.00
-savorandom 1 6          # roll a die
-savofor 3 "hello"       # print "hello" three times
-savoif (@x > 3)         # -> true
-savoprint "done\n"      # \n, \t, \r, \\ and \" escapes are supported
+savovar @x = (3 + 4) * 2      # expressions with precedence -> 14
+savoprint "x = " + @x
+savorandom 1 6                # roll a die
+
+savovar @n = 5                # while loop: factorial of 5
+savovar @f = 1
+savowhile (@n > 1)
+    savovar @f = @f * @n
+    savovar @n = @n - 1
+savoend
+savoprint "5! = " + @f        # 120.00
 ```
 
 ## Project layout
