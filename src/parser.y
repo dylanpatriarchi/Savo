@@ -23,6 +23,7 @@
 %token VAR SQRT POW MAX MIN PLUS MINUS MULTIPLY DIVIDE
 %token ARGUMENT NUMBER STRING EXIT OPENBRACKET CLOSEBRACKET COMMA NEGATION
 %token LS DIVISION MOD ABS RANDOM LT GT LE GE
+%token FLOOR CEIL ROUND LOG LOG10 NEWLINE
 
 %type <string>  STRING
 %type <string>  ARGUMENT
@@ -32,10 +33,23 @@
 
 %%
 
-program :  commands
-         | commands program;
+program:
+      /* empty */
+    | program line
+    ;
 
-commands:
+/*
+ * Statements are terminated by a newline. Wrapping each line in its own rule
+ * gives Bison a synchronisation point: on a syntax error it skips to the next
+ * newline and keeps going, so one typo no longer aborts the whole session.
+ */
+line:
+      NEWLINE
+    | command NEWLINE
+    | error NEWLINE   { yyerrok; }
+    ;
+
+command:
            printstmt
          | dirstmt
          | lsstmt
@@ -53,6 +67,11 @@ commands:
          | modstmt
          | absstmt
          | randomstmt
+         | floorstmt
+         | ceilstmt
+         | roundstmt
+         | logstmt
+         | log10stmt
          | ifstmt
          | varstmt
          | sqrtstmt
@@ -134,6 +153,44 @@ absstmt:
     }
     ;
 
+floorstmt:
+    FLOOR value {
+        printf("%.2f\n", floorf($2));
+    }
+    ;
+
+ceilstmt:
+    CEIL value {
+        printf("%.2f\n", ceilf($2));
+    }
+    ;
+
+roundstmt:
+    ROUND value {
+        printf("%.2f\n", roundf($2));
+    }
+    ;
+
+logstmt:
+    LOG value {
+        if ($2 <= 0) {
+            fprintf(stderr, "savo: log of a non-positive value\n");
+        } else {
+            printf("%.4f\n", logf($2));
+        }
+    }
+    ;
+
+log10stmt:
+    LOG10 value {
+        if ($2 <= 0) {
+            fprintf(stderr, "savo: log10 of a non-positive value\n");
+        } else {
+            printf("%.4f\n", log10f($2));
+        }
+    }
+    ;
+
 randomstmt:
     RANDOM value value {
         int lo = (int) $2;
@@ -173,6 +230,10 @@ printstmt:
           if (strlen(prompt) > 0) printf("\n");
           free($2);
       }
+    | PRINT value {
+          printf("%.2f", $2);
+          if (strlen(prompt) > 0) printf("\n");
+      }
     ;
 
 dirstmt:
@@ -207,6 +268,7 @@ helpstmt:
         printf("savodir\t\t<arguments>\t\tlist files (alias of ls)\n");
         printf("savols\t\t<arguments>\t\tlist files in directory\n");
         printf("savoprint\t<\"string\">\t\tprint a string literal\n");
+        printf("savoprint\t<value>\t\t\tprint a number or variable\n");
         printf("savoprint\t<\"string\"> + <value>\tprint a string followed by a value\n");
         printf("savovar\t\t<@name> <value>\t\tdefine or update a variable\n");
         printf("savofor\t\t<count> <\"string\">\trepeat a string count times\n");
@@ -220,6 +282,11 @@ helpstmt:
         printf("savosqrt\t<value>\t\t\tsquare root\n");
         printf("savopow\t\t<base> <exp>\t\tpower function\n");
         printf("savoabs\t\t<value>\t\t\tabsolute value\n");
+        printf("savofloor\t<value>\t\t\tround down\n");
+        printf("savoceil\t<value>\t\t\tround up\n");
+        printf("savoround\t<value>\t\t\tround to nearest\n");
+        printf("savolog\t\t<value>\t\t\tnatural logarithm\n");
+        printf("savolog10\t<value>\t\t\tbase-10 logarithm\n");
         printf("savomax\t\t<value> <value>\t\tmaximum of two values\n");
         printf("savomin\t\t<value> <value>\t\tminimum of two values\n");
         printf("savorandom\t<min> <max>\t\trandom integer in [min, max]\n");
