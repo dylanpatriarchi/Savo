@@ -25,7 +25,7 @@ typedef enum {
 } Builtin;
 
 typedef enum {
-    E_NUM, E_VAR, E_BIN, E_NEG, E_NOT, E_CALL, E_STRCMP
+    E_NUM, E_VAR, E_BIN, E_NEG, E_NOT, E_CALL, E_STRCMP, E_CALLUSER
 } ExprKind;
 
 typedef struct Expr {
@@ -37,8 +37,15 @@ typedef struct Expr {
         struct Expr *unary;                           /* E_NEG / E_NOT */
         struct { Builtin fn; struct Expr *a, *b; } call; /* E_CALL (b may be NULL) */
         struct { int ne; char *a, *b; } strcmp;       /* E_STRCMP (ne = != when 1) */
+        struct { char *name; struct Expr **argv; int argc; } ucall; /* E_CALLUSER */
     } as;
 } Expr;
+
+/* Builders for comma-separated parameter and argument lists. */
+typedef struct Param { char *name; struct Param *next; } Param;
+typedef struct Arg   { Expr *e;    struct Arg   *next; } Arg;
+Param *param_add(Param *list, char *name);   /* append name, return head */
+Arg   *arg_add(Arg *list, Expr *e);          /* append e, return head */
 
 Expr *expr_num(float v);
 Expr *expr_var(char *name);            /* takes ownership of name */
@@ -47,6 +54,7 @@ Expr *expr_neg(Expr *e);
 Expr *expr_not(Expr *e);
 Expr *expr_call(Builtin fn, Expr *a, Expr *b);
 Expr *expr_strcmp(int ne, char *a, char *b);   /* takes ownership of a and b */
+Expr *expr_calluser(char *name, Arg *args);    /* user function call */
 
 float eval_expr(const Expr *e);
 void  free_expr(Expr *e);
@@ -66,6 +74,8 @@ typedef enum {
     S_BLOCK,       /* a sequence of statements (body of if/while)          */
     S_IF,          /* savoif (cond) ... [savoelse ...] savoend             */
     S_WHILE,       /* savowhile (cond) ... savoend                         */
+    S_FUNCDEF,     /* savodef name(params) ... savoend                     */
+    S_RETURN,      /* savoreturn [expr]                                    */
     S_DIR,         /* savodir / savols                                     */
     S_CLS, S_CLEAR, S_HELP, S_QUIT, S_POINTER
 } StmtKind;
@@ -86,9 +96,11 @@ typedef struct Stmt {
     Builtin      fn;
     ForMode      mode;
     int          flag;    /* S_ASSIGN: echo the assignment */
-    struct Stmt *body;    /* S_IF/S_WHILE body, or S_BLOCK statement list head */
+    struct Stmt *body;    /* S_IF/S_WHILE body, S_BLOCK head, S_FUNCDEF body */
     struct Stmt *body2;   /* S_IF else-branch */
     struct Stmt *next;    /* next statement in a block */
+    char       **params;  /* S_FUNCDEF parameter names */
+    int          nparams; /* S_FUNCDEF parameter count */
 } Stmt;
 
 Stmt *stmt_print_str(char *s, Expr *trailing /*nullable*/);
@@ -98,6 +110,11 @@ Stmt *stmt_block_new(void);
 void  stmt_block_add(Stmt *block, Stmt *s);   /* appends s to block */
 Stmt *stmt_if(Expr *cond, Stmt *thenb, Stmt *elseb /*nullable*/);
 Stmt *stmt_while(Expr *cond, Stmt *body);
+Stmt *stmt_funcdef(char *name, Param *params, Stmt *body);
+Stmt *stmt_return(Expr *e /*nullable*/);
+
+/* Register a function definition (the interpreter keeps ownership). */
+void  func_define(Stmt *def);
 Stmt *stmt_arith(BinOp op, Expr *a, Expr *b);
 Stmt *stmt_math1(Builtin fn, Expr *a);
 Stmt *stmt_math2(Builtin fn, Expr *a, Expr *b);

@@ -13,6 +13,48 @@ static void runtime_error(const char *msg) {
     had_error = 1;
 }
 
+/* Return handling: set by S_RETURN, checked by block/loop execution. */
+static int   g_returning = 0;
+static float g_return_value = 0;
+
+/* Registered user functions (each points at a retained S_FUNCDEF node). */
+static Stmt *g_functions = NULL;
+
+static Stmt *func_lookup(const char *name) {
+    Stmt *f;
+    for (f = g_functions; f != NULL; f = f->next)
+        if (strcmp(f->str, name) == 0) return f;
+    return NULL;
+}
+
+void func_define(Stmt *def) {
+    /* def->next is unused once a definition is registered, so reuse it to
+     * chain the function table. Definitions live for the whole program. */
+    def->next = g_functions;
+    g_functions = def;
+}
+
+/* Small builders for parameter / argument lists (used by the parser). */
+Param *param_add(Param *list, char *name) {
+    Param *p = malloc(sizeof(Param)), *tail;
+    if (p == NULL) { fprintf(stderr, "savo: out of memory\n"); exit(1); }
+    p->name = name; p->next = NULL;
+    if (list == NULL) return p;
+    for (tail = list; tail->next; tail = tail->next) ;
+    tail->next = p;
+    return list;
+}
+
+Arg *arg_add(Arg *list, Expr *e) {
+    Arg *a = malloc(sizeof(Arg)), *tail;
+    if (a == NULL) { fprintf(stderr, "savo: out of memory\n"); exit(1); }
+    a->e = e; a->next = NULL;
+    if (list == NULL) return a;
+    for (tail = list; tail->next; tail = tail->next) ;
+    tail->next = a;
+    return list;
+}
+
 /* ============================ expressions ============================ */
 
 static Expr *new_expr(ExprKind kind) {
@@ -43,6 +85,57 @@ Expr *expr_strcmp(int ne, char *a, char *b) {
     Expr *e = new_expr(E_STRCMP);
     e->as.strcmp.ne = ne; e->as.strcmp.a = a; e->as.strcmp.b = b;
     return e;
+}
+
+Expr *expr_calluser(char *name, Arg *args) {
+    Expr *e = new_expr(E_CALLUSER);
+    int n = 0, i = 0;
+    Arg *a;
+    for (a = args; a != NULL; a = a->next) n++;
+    e->as.ucall.name = name;
+    e->as.ucall.argc = n;
+    e->as.ucall.argv = n ? malloc(sizeof(Expr *) * n) : NULL;
+    if (n && e->as.ucall.argv == NULL) { fprintf(stderr, "savo: out of memory\n"); exit(1); }
+    for (a = args; a != NULL; ) {   /* move each Expr into argv, free the Arg cells */
+        Arg *next = a->next;
+        e->as.ucall.argv[i++] = a->e;
+        free(a);
+        a = next;
+    }
+    return e;
+}
+
+/* forward declaration: a call runs statements */
+void exec_stmt(const Stmt *s);
+
+static float call_user(const Expr *e) {
+    Stmt *fn = func_lookup(e->as.ucall.name);
+    int i, saved_r; float saved_v, rv, *values;
+
+    if (fn == NULL) { runtime_error("call to undefined function"); return 0; }
+    if (e->as.ucall.argc != fn->nparams) {
+        runtime_error("wrong number of arguments in function call");
+        return 0;
+    }
+
+    /* Evaluate arguments in the caller's scope, before creating the new one. */
+    values = e->as.ucall.argc ? malloc(sizeof(float) * e->as.ucall.argc) : NULL;
+    for (i = 0; i < e->as.ucall.argc; i++)
+        values[i] = eval_expr(e->as.ucall.argv[i]);
+
+    symtab_push_scope();
+    for (i = 0; i < fn->nparams; i++)
+        symtab_set(fn->params[i], values[i]);
+    free(values);
+
+    saved_r = g_returning; saved_v = g_return_value;
+    g_returning = 0; g_return_value = 0;
+    exec_stmt(fn->body);
+    rv = g_return_value;
+    g_returning = saved_r; g_return_value = saved_v;
+
+    symtab_pop_scope();
+    return rv;
 }
 
 static float call_builtin(Builtin fn, float a, float b) {
@@ -83,6 +176,8 @@ float eval_expr(const Expr *e) {
             float b = e->as.call.b ? eval_expr(e->as.call.b) : 0;
             return call_builtin(e->as.call.fn, a, b);
         }
+        case E_CALLUSER:
+            return call_user(e);
         case E_BIN: {
             float l = eval_expr(e->as.bin.l);
             float r = eval_expr(e->as.bin.r);
@@ -113,6 +208,13 @@ void free_expr(Expr *e) {
         case E_BIN:    free_expr(e->as.bin.l); free_expr(e->as.bin.r); break;
         case E_CALL:   free_expr(e->as.call.a); free_expr(e->as.call.b); break;
         case E_STRCMP: free(e->as.strcmp.a); free(e->as.strcmp.b); break;
+        case E_CALLUSER: {
+            int i;
+            for (i = 0; i < e->as.ucall.argc; i++) free_expr(e->as.ucall.argv[i]);
+            free(e->as.ucall.argv);
+            free(e->as.ucall.name);
+            break;
+        }
         case E_NUM:    break;
     }
     free(e);
@@ -134,7 +236,27 @@ Stmt *stmt_print_expr(Expr *e)      { Stmt *s = new_stmt(S_PRINT_EXPR); s->a = e
 Stmt *stmt_assign(char *name, Expr *e, int echo) { Stmt *s = new_stmt(S_ASSIGN); s->str = name; s->a = e; s->flag = echo; return s; }
 Stmt *stmt_if(Expr *cond, Stmt *thenb, Stmt *elseb) { Stmt *s = new_stmt(S_IF); s->a = cond; s->body = thenb; s->body2 = elseb; return s; }
 Stmt *stmt_while(Expr *cond, Stmt *body) { Stmt *s = new_stmt(S_WHILE); s->a = cond; s->body = body; return s; }
+Stmt *stmt_return(Expr *e) { Stmt *s = new_stmt(S_RETURN); s->a = e; return s; }
 Stmt *stmt_block_new(void) { return new_stmt(S_BLOCK); }
+
+Stmt *stmt_funcdef(char *name, Param *params, Stmt *body) {
+    Stmt *s = new_stmt(S_FUNCDEF);
+    int n = 0, i = 0;
+    Param *p;
+    for (p = params; p != NULL; p = p->next) n++;
+    s->str = name;
+    s->nparams = n;
+    s->params = n ? malloc(sizeof(char *) * n) : NULL;
+    if (n && s->params == NULL) { fprintf(stderr, "savo: out of memory\n"); exit(1); }
+    for (p = params; p != NULL; ) {   /* move names into the array, free the cells */
+        Param *next = p->next;
+        s->params[i++] = p->name;
+        free(p);
+        p = next;
+    }
+    s->body = body;
+    return s;
+}
 
 void stmt_block_add(Stmt *block, Stmt *s) {
     if (s == NULL) return;
@@ -175,6 +297,8 @@ static void print_help(void) {
     printf("savowhile\t(<cond>) .. savoend\t\twhile loop\n");
     printf("savofor\t\t<n> <\"s\"> | (a,b,s) <\"s\"> [+|* k]\trepeat / counted loop\n");
     printf("savowhile\t<n> <\"s\">\t\t\trepeat a string (count form)\n");
+    printf("savodef\t\tname(@a, @b) .. savoend\t\tdefine a function\n");
+    printf("savoreturn\t<expr>\t\t\t\treturn a value from a function\n");
     printf("savodir/savols\t[arg]\t\t\t\tlist files\n");
     printf("savocls/savoclear\t\t\t\tclear screen\n");
     printf("savopointercell\t<\"string\">\t\tprint a memory address\n");
@@ -247,7 +371,7 @@ void exec_stmt(const Stmt *s) {
         }
         case S_BLOCK: {
             Stmt *p;
-            for (p = s->body; p != NULL; p = p->next) exec_stmt(p);
+            for (p = s->body; p != NULL && !g_returning; p = p->next) exec_stmt(p);
             break;
         }
         case S_IF:
@@ -255,7 +379,14 @@ void exec_stmt(const Stmt *s) {
             else if (s->body2) exec_stmt(s->body2);
             break;
         case S_WHILE:
-            while (eval_expr(s->a) != 0) exec_stmt(s->body);
+            while (!g_returning && eval_expr(s->a) != 0) exec_stmt(s->body);
+            break;
+        case S_FUNCDEF:
+            func_define((Stmt *) s);   /* retained by the function table */
+            break;
+        case S_RETURN:
+            g_return_value = s->a ? eval_expr(s->a) : 0;
+            g_returning = 1;
             break;
         case S_REPEAT: {
             int i, n = (int) eval_expr(s->a);
@@ -306,6 +437,11 @@ void free_stmt(Stmt *s) {
         free_expr(s->d);
         free_stmt(s->body);
         free_stmt(s->body2);
+        if (s->params) {
+            int i;
+            for (i = 0; i < s->nparams; i++) free(s->params[i]);
+            free(s->params);
+        }
         free(s);
         s = next;
     }
