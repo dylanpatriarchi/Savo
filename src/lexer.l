@@ -103,6 +103,8 @@ Z [zZ]
 {S}{A}{V}{O}{E}{N}{D}             { return SAVOEND; }
 {S}{A}{V}{O}{D}{E}{F}             { return SAVODEF; }
 {S}{A}{V}{O}{R}{E}{T}{U}{R}{N}    { return SAVORETURN; }
+{S}{A}{V}{O}{P}{U}{S}{H}          { return PUSH; }
+{S}{A}{V}{O}{S}{E}{T}             { return SET; }
 {S}{A}{V}{O}{V}{A}{R}             { return VAR; }
 {S}{A}{V}{O}{S}{Q}{R}{T}          { return SQRT; }
 {S}{A}{V}{O}{P}{O}{W}             { return POW; }
@@ -123,6 +125,8 @@ Z [zZ]
 "("                   { return OPENBRACKET; }
 "!"                   { return NEGATION; }
 ")"                   { return CLOSEBRACKET; }
+"["                   { return LBRACKET; }
+"]"                   { return RBRACKET; }
 ","                   { return COMMA; }
 "+"                   { return PLUS; }
 "-"                   { return MINUS; }
