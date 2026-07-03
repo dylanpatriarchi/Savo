@@ -1,0 +1,29 @@
+# user-defined functions: parameters, nesting, recursion, local scope
+savodef square(@n)
+    savoreturn @n * @n
+savoend
+
+savodef fact(@n)
+    savoif (@n <= 1)
+        savoreturn 1
+    savoend
+    savoreturn @n * fact(@n - 1)
+savoend
+
+savodef max3(@a, @b, @c)
+    savoreturn savomax(@a, savomax(@b, @c))
+savoend
+
+savoprint square(6)
+savoprint fact(5)
+savoprint max3(3, 9, 5)
+savoprint square(fact(3))
+
+# a local variable must not leak to the global scope
+savovar @g = 7
+savodef uses_local(@n)
+    savovar @g = @n + 1
+    savoreturn @g
+savoend
+savoprint uses_local(100)
+savoprint @g
