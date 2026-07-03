@@ -14,13 +14,14 @@
    Stmt  *stmt;
    Param *plist;
    Arg   *alist;
+   Pair  *pairs;
 };
 
 %token DIR HELP PRINT QUIT CLEAR CLS FOR WHILE SUM SUBTRACT POINTERCELL MOLTIPLICATION IF
 %token VAR SQRT POW MAX MIN ABS RANDOM FLOOR CEIL ROUND LOG LOG10 DIVISION MOD LS
 %token LEN UPPER LOWER TOSTR TONUM
 %token OPENBRACKET CLOSEBRACKET COMMA EXIT NEWLINE ASSIGN SAVOEND SAVOELSE SAVODEF SAVORETURN
-%token LBRACKET RBRACKET PUSH SET
+%token LBRACKET RBRACKET PUSH SET LBRACE RBRACE COLON DOT
 %token EQUAL NOTEQUAL LT GT LE GE
 %token PLUS MINUS MULTIPLY DIVIDE PERCENT NEGATION
 %token <string>  STRING ARGUMENT IDENTIFIER
@@ -35,6 +36,8 @@
 %type <stmt> pushstmt setstmt
 %type <plist> paramlist paramnames
 %type <alist> arglist argvalues
+%type <pairs> pairlist pairs
+%type <string> objkey
 
 %left EQUAL NOTEQUAL LT GT LE GE
 %left PLUS MINUS
@@ -42,10 +45,10 @@
 %right NEGATION
 %right UMINUS
 
-/* Expected, benign shift/reduce conflicts (all resolved by shifting, which is
- * what we want): a postfix '(' is a call and a postfix '[' is a subscript, each
- * binding tighter than reducing the bare atom/identifier. */
-%expect 4
+/* Expected, benign shift/reduce conflicts, all resolved by shifting (what we
+ * want): postfix '(' (call), '[' (subscript) and '.' (field access) each bind
+ * tighter than reducing the bare atom/identifier. */
+%expect 6
 
 %%
 
@@ -98,7 +101,9 @@ atom:
     | IDENTIFIER                      { $$ = expr_var($1); }
     | OPENBRACKET expr CLOSEBRACKET   { $$ = $2; }
     | LBRACKET arglist RBRACKET       { $$ = expr_array($2); }        /* array literal */
+    | LBRACE pairlist RBRACE          { $$ = expr_object($2); }       /* object literal */
     | atom LBRACKET expr RBRACKET     { $$ = expr_index($1, $3); }    /* subscript */
+    | atom DOT IDENTIFIER             { $$ = expr_index($1, expr_str($3)); } /* field */
     | MINUS atom %prec UMINUS         { $$ = expr_neg($2); }
     | NEGATION atom                   { $$ = expr_not($2); }
     | callexpr                        { $$ = $1; }
@@ -133,6 +138,20 @@ arglist:
 argvalues:
       expr                   { $$ = arg_add(NULL, $1); }
     | argvalues COMMA expr   { $$ = arg_add($1, $3); }
+    ;
+
+/* object literal contents: key: value pairs (possibly empty) */
+pairlist:
+      /* empty */   { $$ = NULL; }
+    | pairs         { $$ = $1; }
+    ;
+pairs:
+      objkey COLON expr              { $$ = pair_add(NULL, $1, $3); }
+    | pairs COMMA objkey COLON expr  { $$ = pair_add($1, $3, $5); }
+    ;
+objkey:
+      IDENTIFIER   { $$ = $1; }
+    | STRING       { $$ = $1; }
     ;
 
 /* A loop count: a bare number or variable (no leading '(' so it never clashes
@@ -244,7 +263,8 @@ pushstmt:
     ;
 
 setstmt:
-    SET IDENTIFIER LBRACKET expr RBRACKET ASSIGN expr  { $$ = stmt_setindex($2, $4, $7); }
+      SET IDENTIFIER LBRACKET expr RBRACKET ASSIGN expr  { $$ = stmt_setindex($2, $4, $7); }
+    | SET IDENTIFIER DOT IDENTIFIER ASSIGN expr          { $$ = stmt_setindex($2, expr_str($4), $6); }
     ;
 
 dirstmt:
