@@ -30,9 +30,19 @@ Value value_array(void) {
     return v;
 }
 
+Value value_object(void) {
+    Map *m = malloc(sizeof(Map));
+    Value v;
+    if (m == NULL) { fprintf(stderr, "savo: out of memory\n"); exit(1); }
+    m->rc = 1; m->head = NULL; m->count = 0;
+    v.type = VAL_OBJ; v.as.obj = m;
+    return v;
+}
+
 Value value_copy(Value v) {
     if (v.type == VAL_STR) return value_str(xstrdup(v.as.str));
     if (v.type == VAL_ARR) { v.as.arr->rc++; return v; }   /* share by reference */
+    if (v.type == VAL_OBJ) { v.as.obj->rc++; return v; }
     return v;
 }
 
@@ -40,15 +50,62 @@ void value_free(Value v) {
     if (v.type == VAL_STR) { free(v.as.str); return; }
     if (v.type == VAL_ARR) {
         Array *a = v.as.arr;
+        int i;
         if (--a->rc > 0) return;
-        {
-            int i;
-            for (i = 0; i < a->count; i++) value_free(a->items[i]);
-        }
+        for (i = 0; i < a->count; i++) value_free(a->items[i]);
         free(a->items);
         free(a);
+        return;
+    }
+    if (v.type == VAL_OBJ) {
+        Map *m = v.as.obj;
+        MapEntry *e;
+        if (--m->rc > 0) return;
+        e = m->head;
+        while (e) {
+            MapEntry *next = e->next;
+            value_free(*e->val);
+            free(e->val);
+            free(e->key);
+            free(e);
+            e = next;
+        }
+        free(m);
     }
 }
+
+static MapEntry *map_find(Map *m, const char *key) {
+    MapEntry *e;
+    for (e = m->head; e; e = e->next)
+        if (strcmp(e->key, key) == 0) return e;
+    return NULL;
+}
+
+void object_set(Value v, const char *key, Value elem) {
+    Map *m = v.as.obj;
+    MapEntry *e = map_find(m, key);
+    if (e != NULL) { value_free(*e->val); *e->val = value_copy(elem); return; }
+    e = malloc(sizeof(MapEntry));
+    if (e == NULL) { fprintf(stderr, "savo: out of memory\n"); exit(1); }
+    e->key = xstrdup(key);
+    e->val = malloc(sizeof(Value));
+    if (e->val == NULL) { fprintf(stderr, "savo: out of memory\n"); exit(1); }
+    *e->val = value_copy(elem);
+    e->next = m->head;
+    m->head = e;
+    m->count++;
+}
+
+Value object_get(Value v, const char *key) {
+    MapEntry *e = map_find(v.as.obj, key);
+    if (e == NULL) {
+        fprintf(stderr, "savo: object has no key '%s' (using 0)\n", key);
+        return value_num(0);
+    }
+    return value_copy(*e->val);
+}
+
+int object_length(Value v) { return v.as.obj->count; }
 
 void array_push(Value v, Value elem) {
     Array *a = v.as.arr;
@@ -82,6 +139,7 @@ void array_set(Value v, int i, Value elem) {
 double value_to_number(Value v) {
     if (v.type == VAL_NUM) return v.as.num;
     if (v.type == VAL_ARR) return v.as.arr->count;   /* arrays coerce to length */
+    if (v.type == VAL_OBJ) return v.as.obj->count;   /* objects coerce to size  */
     return atof(v.as.str);
 }
 
@@ -120,6 +178,20 @@ static void repr_into(char **buf, size_t *len, size_t *cap, Value v, int quote_s
             sb_append(buf, len, cap, "]");
             break;
         }
+        case VAL_OBJ: {
+            MapEntry *e;
+            int first = 1;
+            sb_append(buf, len, cap, "{");
+            for (e = v.as.obj->head; e; e = e->next) {
+                if (!first) sb_append(buf, len, cap, ", ");
+                first = 0;
+                sb_append(buf, len, cap, e->key);
+                sb_append(buf, len, cap, ": ");
+                repr_into(buf, len, cap, *e->val, 1);
+            }
+            sb_append(buf, len, cap, "}");
+            break;
+        }
     }
 }
 
@@ -137,6 +209,7 @@ char *value_to_string(Value v) {
 int value_truthy(Value v) {
     if (v.type == VAL_NUM) return v.as.num != 0;
     if (v.type == VAL_ARR) return v.as.arr->count != 0;
+    if (v.type == VAL_OBJ) return v.as.obj->count != 0;
     return v.as.str[0] != '\0';
 }
 
