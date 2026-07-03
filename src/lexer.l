@@ -108,6 +108,11 @@ Z [zZ]
 {S}{A}{V}{O}{P}{O}{W}             { return POW; }
 {S}{A}{V}{O}{M}{A}{X}             { return MAX; }
 {S}{A}{V}{O}{M}{I}{N}             { return MIN; }
+{S}{A}{V}{O}{L}{E}{N}             { return LEN; }
+{S}{A}{V}{O}{U}{P}{P}{E}{R}       { return UPPER; }
+{S}{A}{V}{O}{L}{O}{W}{E}{R}       { return LOWER; }
+{S}{A}{V}{O}{S}{T}{R}             { return TOSTR; }
+{S}{A}{V}{O}{N}{U}{M}             { return TONUM; }
 "<="                  { return LE; }
 ">="                  { return GE; }
 "!="                  { return NOTEQUAL; }
