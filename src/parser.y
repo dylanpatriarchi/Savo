@@ -8,15 +8,17 @@
 %}
 
 %union {
-   char *string;
-   float fNumber;
-   Expr *expr;
-   Stmt *stmt;
+   char  *string;
+   float  fNumber;
+   Expr  *expr;
+   Stmt  *stmt;
+   Param *plist;
+   Arg   *alist;
 };
 
 %token DIR HELP PRINT QUIT CLEAR CLS FOR WHILE SUM SUBTRACT POINTERCELL MOLTIPLICATION IF
 %token VAR SQRT POW MAX MIN ABS RANDOM FLOOR CEIL ROUND LOG LOG10 DIVISION MOD LS
-%token OPENBRACKET CLOSEBRACKET COMMA EXIT NEWLINE ASSIGN SAVOEND SAVOELSE
+%token OPENBRACKET CLOSEBRACKET COMMA EXIT NEWLINE ASSIGN SAVOEND SAVOELSE SAVODEF SAVORETURN
 %token EQUAL NOTEQUAL LT GT LE GE
 %token PLUS MINUS MULTIPLY DIVIDE PERCENT NEGATION
 %token <string>  STRING ARGUMENT IDENTIFIER
@@ -27,13 +29,20 @@
 %type <stmt> divisionstmt modstmt sqrtstmt powstmt maxstmt minstmt absstmt
 %type <stmt> floorstmt ceilstmt roundstmt logstmt log10stmt randomstmt
 %type <stmt> ifstmt forstmt whilestmt dirstmt lsstmt pointerstmt
-%type <stmt> helpstmt quitstmt clsstmt clearstmt block
+%type <stmt> helpstmt quitstmt clsstmt clearstmt block funcdefstmt returnstmt
+%type <plist> paramlist paramnames
+%type <alist> arglist argvalues
 
 %left EQUAL NOTEQUAL LT GT LE GE
 %left PLUS MINUS
 %left MULTIPLY DIVIDE PERCENT
 %right NEGATION
 %right UMINUS
+
+/* One expected shift/reduce conflict: an IDENTIFIER followed by '(' is a
+ * function call rather than a variable next to a parenthesised expression.
+ * Bison shifts (the call reading), which is what we want. */
+%expect 1
 
 %%
 
@@ -49,8 +58,9 @@ program:
  */
 topline:
       NEWLINE
-    | stmt NEWLINE     { if ($1) { exec_stmt($1); free_stmt($1); } }
-    | error NEWLINE    { yyerrok; }
+    | stmt NEWLINE        { if ($1) { exec_stmt($1); free_stmt($1); } }
+    | funcdefstmt NEWLINE { func_define($1); }   /* retained, not freed */
+    | error NEWLINE       { yyerrok; }
     ;
 
 stmt:
@@ -58,7 +68,7 @@ stmt:
     | clsstmt | clearstmt | forstmt | whilestmt | addstmt | subtractstmt
     | pointerstmt | moltiplicationstmt | divisionstmt | modstmt | absstmt
     | randomstmt | floorstmt | ceilstmt | roundstmt | logstmt | log10stmt
-    | ifstmt | sqrtstmt | powstmt | maxstmt | minstmt
+    | ifstmt | sqrtstmt | powstmt | maxstmt | minstmt | returnstmt
     ;
 
 /* ------------------------------ expressions ------------------------------ */
@@ -100,6 +110,17 @@ callexpr:
     | MAX   OPENBRACKET expr COMMA expr CLOSEBRACKET    { $$ = expr_call(FN_MAX, $3, $5); }
     | MIN   OPENBRACKET expr COMMA expr CLOSEBRACKET    { $$ = expr_call(FN_MIN, $3, $5); }
     | RANDOM OPENBRACKET expr COMMA expr CLOSEBRACKET   { $$ = expr_call(FN_RANDOM, $3, $5); }
+    | IDENTIFIER OPENBRACKET arglist CLOSEBRACKET       { $$ = expr_calluser($1, $3); }
+    ;
+
+/* comma-separated call arguments (possibly empty) */
+arglist:
+      /* empty */   { $$ = NULL; }
+    | argvalues     { $$ = $1; }
+    ;
+argvalues:
+      expr                   { $$ = arg_add(NULL, $1); }
+    | argvalues COMMA expr   { $$ = arg_add($1, $3); }
     ;
 
 /* A loop count: a bare number or variable (no leading '(' so it never clashes
@@ -186,6 +207,27 @@ whilestmt:
     | WHILE OPENBRACKET ifcond CLOSEBRACKET NEWLINE block SAVOEND {
           $$ = stmt_while($3, $6);
       }
+    ;
+
+/* user-defined functions */
+funcdefstmt:
+    SAVODEF IDENTIFIER OPENBRACKET paramlist CLOSEBRACKET NEWLINE block SAVOEND {
+        $$ = stmt_funcdef($2, $4, $7);
+    }
+    ;
+
+paramlist:
+      /* empty */  { $$ = NULL; }
+    | paramnames   { $$ = $1; }
+    ;
+paramnames:
+      IDENTIFIER                  { $$ = param_add(NULL, $1); }
+    | paramnames COMMA IDENTIFIER { $$ = param_add($1, $3); }
+    ;
+
+returnstmt:
+      SAVORETURN expr  { $$ = stmt_return($2); }
+    | SAVORETURN       { $$ = stmt_return(NULL); }
     ;
 
 dirstmt:

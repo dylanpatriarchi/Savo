@@ -101,6 +101,8 @@ Z [zZ]
 {S}{A}{V}{O}{I}{F}                { return IF; }
 {S}{A}{V}{O}{E}{L}{S}{E}          { return SAVOELSE; }
 {S}{A}{V}{O}{E}{N}{D}             { return SAVOEND; }
+{S}{A}{V}{O}{D}{E}{F}             { return SAVODEF; }
+{S}{A}{V}{O}{R}{E}{T}{U}{R}{N}    { return SAVORETURN; }
 {S}{A}{V}{O}{V}{A}{R}             { return VAR; }
 {S}{A}{V}{O}{S}{Q}{R}{T}          { return SQRT; }
 {S}{A}{V}{O}{P}{O}{W}             { return POW; }
