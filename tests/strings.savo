@@ -1,0 +1,4 @@
+savoprint "tab\there\n"
+savoprint "line1\nline2\n"
+# this comment is ignored
+savoprint "after comment\n"

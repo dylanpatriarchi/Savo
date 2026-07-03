@@ -17,7 +17,7 @@ CORE_SRCS := $(SRC)/global.c $(SRC)/symtab.c
 STMT_SRCS := $(wildcard $(SRC)/statements/*.c)
 GEN_SRCS  := $(BUILD)/parser.tab.c $(BUILD)/lex.yy.c
 
-.PHONY: all run example clean
+.PHONY: all run example test clean
 
 all: $(BIN)
 
@@ -39,6 +39,9 @@ run: $(BIN)
 
 example: $(BIN)
 	./$(BIN) examples/demo.savo
+
+test: $(BIN)
+	@sh tests/run.sh
 
 clean:
 	rm -rf $(BUILD) $(BIN) savo.exe

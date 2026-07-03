@@ -1,0 +1,6 @@
+# variables persist and can be read back by later commands
+savovar @x 10
+savovar @y 3
+savosum @x @y
+savovar @y @x
+savoprint @y

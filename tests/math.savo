@@ -1,0 +1,9 @@
+savosqrt 144
+savopow 2 10
+savoabs -7
+savofloor 3.7
+savoceil 3.2
+savoround 3.5
+savolog10 1000
+savomax 3 8
+savomin 3 8

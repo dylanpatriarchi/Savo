@@ -1,0 +1,9 @@
+savoif (10 == 10)
+savoif (5 != 10)
+savoif (3 < 8)
+savoif (8 >= 8)
+savoif (!0)
+savoif ("a" == "a")
+savofor 3 "x"
+savofor (0, 3, 1) "n: " + 0
+savowhile 2 "w"
