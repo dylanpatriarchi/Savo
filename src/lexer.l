@@ -6,14 +6,12 @@
 	#include <unistd.h>
 	#include "global.h"
 	#include "symtab.h"
-	#include "statements/printstmt.h"
-	#include "statements/forstmt.h"
-	#include "statements/whilestmt.h"
+	#include "ast.h"
 	#include "parser.tab.h"
 	int yyerror(const char *errormsg);
 	int yyparse(void);
 
-	/* Set to 1 by yyerror; becomes the process exit status. */
+	/* Set to 1 by yyerror or a runtime error; becomes the process exit status. */
 	int had_error = 0;
 
 	/* Rewrite common escape sequences (\n \t \r \\ \") in place. */
@@ -40,9 +38,12 @@
 %}
 
 %option yylineno
+/* ARG collects the rest of the line as a shell argument, but only right after
+ * savodir / savols. Keeping it in its own state stops paths and flags (which
+ * may start with '-') from clashing with the minus operator elsewhere. */
+%x ARG
 
-Number        -?(([0-9]+)|([0-9]+\.[0-9]+)|(\.[0-9]+))
-Argument      (([-*./|a-zA-Z])|([-*./|_a-zA-Z][-*./|_a-zA-Z0-9]+))
+Number        ([0-9]+)|([0-9]+\.[0-9]+)|(\.[0-9]+)
 String        \"(([^\"]*)|([\!]*))\"
 Identifier    @?(([a-zA-Z])|([_a-zA-Z][_a-zA-Z0-9]+))
 
@@ -72,7 +73,6 @@ W [wW]
 X [xX]
 Y [yY]
 Z [zZ]
-NQUOTE [^']
 
 %%
 {S}{A}{V}{O}{P}{R}{I}{N}{T}       { return PRINT; }
@@ -80,8 +80,8 @@ NQUOTE [^']
 {S}{A}{V}{O}{H}{E}{L}{P}	      { return HELP; }
 {S}{A}{V}{O}{Q}{U}{I}{T}	      { return QUIT; }
 {S}{A}{V}{O}{E}{X}{I}{T}	      { return EXIT; }
-{S}{A}{V}{O}{D}{I}{R}             { return DIR; }
-{S}{A}{V}{O}{L}{S}                { return LS; }
+{S}{A}{V}{O}{D}{I}{R}             { BEGIN(ARG); return DIR; }
+{S}{A}{V}{O}{L}{S}                { BEGIN(ARG); return LS; }
 {S}{A}{V}{O}{C}{L}{S}             { return CLS; }
 {S}{A}{V}{O}{F}{O}{R}             { return FOR; }
 {S}{A}{V}{O}{W}{H}{I}{L}{E}       { return WHILE; }
@@ -108,6 +108,7 @@ NQUOTE [^']
 ">="                  { return GE; }
 "!="                  { return NOTEQUAL; }
 "=="                  { return EQUAL; }
+"="                   { return ASSIGN; }
 "<"                   { return LT; }
 ">"                   { return GT; }
 "("                   { return OPENBRACKET; }
@@ -118,13 +119,19 @@ NQUOTE [^']
 "-"                   { return MINUS; }
 "*"                   { return MULTIPLY; }
 "/"                   { return DIVIDE; }
+"%"                   { return PERCENT; }
 #[^\n]*               { }
 [\n]                  { return NEWLINE; }
 [ \t\v\f\r]+          { }
 {String}              { yylval.string = strdup( yytext + 1 ); yylval.string[ yyleng - 2 ] = 0; unescape( yylval.string ); return STRING; }
 {Number}              { yylval.fNumber = atof( yytext ); return NUMBER; }
-{Argument}            { yylval.string = strdup( yytext); return ARGUMENT; }
 {Identifier}          { yylval.string = strdup( yytext); return IDENTIFIER; }
+
+<ARG>[ \t]+           { }
+<ARG>#[^\n]*          { }
+<ARG>[^ \t\n#][^\n]*  { yylval.string = strdup( yytext ); BEGIN(INITIAL); return ARGUMENT; }
+<ARG>\n               { BEGIN(INITIAL); return NEWLINE; }
+
 <<EOF>>               { static int nl = 0; if (!nl) { nl = 1; return NEWLINE; } return 0; }
 
 %%
