@@ -3,6 +3,7 @@
 	#include <stdlib.h>
 	#include <string.h>
 	#include <time.h>
+	#include <unistd.h>
 	#include "global.h"
 	#include "symtab.h"
 	#include "statements/printstmt.h"
@@ -11,6 +12,9 @@
 	#include "parser.tab.h"
 	int yyerror(const char *errormsg);
 	int yyparse(void);
+
+	/* Set to 1 by yyerror; becomes the process exit status. */
+	int had_error = 0;
 
 	/* Rewrite common escape sequences (\n \t \r \\ \") in place. */
 	static void unescape(char *s) {
@@ -34,6 +38,8 @@
 		*w = 0;
 	}
 %}
+
+%option yylineno
 
 Number        -?(([0-9]+)|([0-9]+\.[0-9]+)|(\.[0-9]+))
 Argument      (([-*./|a-zA-Z])|([-*./|_a-zA-Z][-*./|_a-zA-Z0-9]+))
@@ -87,6 +93,11 @@ NQUOTE [^']
 {S}{A}{V}{O}{M}{O}{D}             { return MOD; }
 {S}{A}{V}{O}{A}{B}{S}             { return ABS; }
 {S}{A}{V}{O}{R}{A}{N}{D}{O}{M}    { return RANDOM; }
+{S}{A}{V}{O}{F}{L}{O}{O}{R}       { return FLOOR; }
+{S}{A}{V}{O}{C}{E}{I}{L}          { return CEIL; }
+{S}{A}{V}{O}{R}{O}{U}{N}{D}       { return ROUND; }
+{S}{A}{V}{O}{L}{O}{G}10           { return LOG10; }
+{S}{A}{V}{O}{L}{O}{G}             { return LOG; }
 {S}{A}{V}{O}{I}{F}                { return IF; }
 {S}{A}{V}{O}{V}{A}{R}             { return VAR; }
 {S}{A}{V}{O}{S}{Q}{R}{T}          { return SQRT; }
@@ -108,32 +119,85 @@ NQUOTE [^']
 "*"                   { return MULTIPLY; }
 "/"                   { return DIVIDE; }
 #[^\n]*               { }
-[\n]                  { }
-[ \t\v\f]+            { }
+[\n]                  { return NEWLINE; }
+[ \t\v\f\r]+          { }
 {String}              { yylval.string = strdup( yytext + 1 ); yylval.string[ yyleng - 2 ] = 0; unescape( yylval.string ); return STRING; }
 {Number}              { yylval.fNumber = atof( yytext ); return NUMBER; }
 {Argument}            { yylval.string = strdup( yytext); return ARGUMENT; }
 {Identifier}          { yylval.string = strdup( yytext); return IDENTIFIER; }
+<<EOF>>               { static int nl = 0; if (!nl) { nl = 1; return NEWLINE; } return 0; }
 
 %%
+static void usage(const char *prog) {
+    printf("Savo %s — a tiny scripting language\n\n", SAVO_VERSION);
+    printf("Usage:\n");
+    printf("  %s [file]        run a .savo script\n", prog);
+    printf("  %s -e \"code\"     run code passed on the command line\n", prog);
+    printf("  %s -              read a script from stdin\n", prog);
+    printf("  %s                start the interactive REPL\n\n", prog);
+    printf("Options:\n");
+    printf("  -e, --eval CODE   evaluate CODE and exit\n");
+    printf("  -h, --help        show this help and exit\n");
+    printf("  -v, --version     show the version and exit\n");
+}
+
 int main(int argc, char **argv) {
-    ++argv;
+    const char *prog = argv[0];
+    const char *filename = NULL;
+    const char *evalcode = NULL;
+    int i;
+
     srand((unsigned int) time(NULL));
-    yyin = stdin;
-    if ( --argc > 0 ) {
+
+    for (i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+            usage(prog);
+            return 0;
+        } else if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--version") == 0) {
+            printf("Savo %s\n", SAVO_VERSION);
+            return 0;
+        } else if (strcmp(argv[i], "-e") == 0 || strcmp(argv[i], "--eval") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr, "savo: option '%s' requires an argument\n", argv[i]);
+                return 2;
+            }
+            evalcode = argv[++i];
+        } else if (argv[i][0] == '-' && strcmp(argv[i], "-") != 0) {
+            fprintf(stderr, "savo: unknown option '%s' (try --help)\n", argv[i]);
+            return 2;
+        } else {
+            filename = argv[i];
+        }
+    }
+
+    if (evalcode != NULL) {
         prompt = "";
-        yyin = fopen(argv[0], "r");
+        yy_scan_string(evalcode);
+    } else if (filename != NULL && strcmp(filename, "-") != 0) {
+        prompt = "";
+        yyin = fopen(filename, "r");
         if (yyin == NULL) {
-            fprintf(stderr, "savo: cannot open file '%s'\n", argv[0]);
+            fprintf(stderr, "savo: cannot open file '%s'\n", filename);
             return 1;
         }
-    } else {
+    } else if (filename != NULL) {   /* explicit "-" -> stdin as a script */
+        prompt = "";
+        yyin = stdin;
+    } else if (isatty(fileno(stdin))) {
+        prompt = ">>> ";
+        yyin = stdin;
         printf("%s", consoleMex);
+        printf("SavoLanguage Console %s\n", SAVO_VERSION);
+        printf("digit savohelp for some tips.\n\n");
         printf("%s", prompt);
+    } else {
+        prompt = "";
+        yyin = stdin;
     }
+
     yyparse();
     symtab_free();
-    return 0;
+    return had_error;
 }
 
 int yywrap(void) {
@@ -141,6 +205,7 @@ int yywrap(void) {
 }
 
 int yyerror(const char *errormsg) {
-   fprintf(stderr, "%s\n", errormsg);
-   exit(1);
+   fprintf(stderr, "savo: line %d: %s\n", yylineno, errormsg);
+   had_error = 1;
+   return 0;
 }
