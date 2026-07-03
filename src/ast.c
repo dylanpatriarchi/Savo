@@ -131,12 +131,25 @@ Stmt *stmt_print_str(char *str, Expr *trailing) {
     Stmt *s = new_stmt(S_PRINT_STR); s->str = str; s->a = trailing; return s;
 }
 Stmt *stmt_print_expr(Expr *e)      { Stmt *s = new_stmt(S_PRINT_EXPR); s->a = e; return s; }
-Stmt *stmt_assign(char *name, Expr *e) { Stmt *s = new_stmt(S_ASSIGN); s->str = name; s->a = e; return s; }
+Stmt *stmt_assign(char *name, Expr *e, int echo) { Stmt *s = new_stmt(S_ASSIGN); s->str = name; s->a = e; s->flag = echo; return s; }
+Stmt *stmt_if(Expr *cond, Stmt *thenb, Stmt *elseb) { Stmt *s = new_stmt(S_IF); s->a = cond; s->body = thenb; s->body2 = elseb; return s; }
+Stmt *stmt_while(Expr *cond, Stmt *body) { Stmt *s = new_stmt(S_WHILE); s->a = cond; s->body = body; return s; }
+Stmt *stmt_block_new(void) { return new_stmt(S_BLOCK); }
+
+void stmt_block_add(Stmt *block, Stmt *s) {
+    if (s == NULL) return;
+    if (block->body == NULL) {
+        block->body = s;
+    } else {
+        Stmt *p = block->body;
+        while (p->next) p = p->next;
+        p->next = s;
+    }
+}
 Stmt *stmt_arith(BinOp op, Expr *a, Expr *b) { Stmt *s = new_stmt(S_ARITH); s->op = op; s->a = a; s->b = b; return s; }
 Stmt *stmt_math1(Builtin fn, Expr *a) { Stmt *s = new_stmt(S_MATH1); s->fn = fn; s->a = a; return s; }
 Stmt *stmt_math2(Builtin fn, Expr *a, Expr *b) { Stmt *s = new_stmt(S_MATH2); s->fn = fn; s->a = a; s->b = b; return s; }
 Stmt *stmt_random(Expr *a, Expr *b) { Stmt *s = new_stmt(S_RANDOM); s->a = a; s->b = b; return s; }
-Stmt *stmt_ifprint(Expr *cond)      { Stmt *s = new_stmt(S_IFPRINT); s->a = cond; return s; }
 Stmt *stmt_repeat(Expr *count, char *str) { Stmt *s = new_stmt(S_REPEAT); s->a = count; s->str = str; return s; }
 Stmt *stmt_dir(char *arg)           { Stmt *s = new_stmt(S_DIR); s->str = arg; return s; }
 Stmt *stmt_simple(StmtKind kind)    { return new_stmt(kind); }
@@ -158,9 +171,10 @@ static void print_help(void) {
     printf("savosqrt/abs/floor/ceil/round/log/log10  <value>\n");
     printf("savopow/max/min  <a> <b>\t\t\tbinary math\n");
     printf("savorandom\t<min> <max>\t\t\trandom integer\n");
-    printf("savoif\t\t(<expr>)\t\t\tprint true/false\n");
-    printf("savofor\t\t<n> <\"s\"> | (a,b,s) <\"s\"> [+|* k]\n");
-    printf("savowhile\t<n> <\"s\">\t\t\trepeat a string\n");
+    printf("savoif\t\t(<cond>) .. [savoelse ..] savoend\tconditional block\n");
+    printf("savowhile\t(<cond>) .. savoend\t\twhile loop\n");
+    printf("savofor\t\t<n> <\"s\"> | (a,b,s) <\"s\"> [+|* k]\trepeat / counted loop\n");
+    printf("savowhile\t<n> <\"s\">\t\t\trepeat a string (count form)\n");
     printf("savodir/savols\t[arg]\t\t\t\tlist files\n");
     printf("savocls/savoclear\t\t\t\tclear screen\n");
     printf("savopointercell\t<\"string\">\t\tprint a memory address\n");
@@ -174,17 +188,19 @@ void exec_stmt(const Stmt *s) {
     switch (s->kind) {
         case S_PRINT_STR:
             printf("%s", s->str);
-            if (s->a) printf("%.2f", eval_expr(s->a));
-            if (interactive()) printf("\n");
+            /* A trailing value can't carry its own newline, so append one.
+             * A bare string literal is printed verbatim (newlines via \n),
+             * except in the REPL where a newline is always convenient. */
+            if (s->a) { printf("%.2f\n", eval_expr(s->a)); }
+            else if (interactive()) printf("\n");
             break;
         case S_PRINT_EXPR:
-            printf("%.2f", eval_expr(s->a));
-            if (interactive()) printf("\n");
+            printf("%.2f\n", eval_expr(s->a));
             break;
         case S_ASSIGN: {
             float v = eval_expr(s->a);
             symtab_set(s->str, v);
-            printf("Variabile %s = %.2f\n", s->str, v);
+            if (s->flag) printf("Variabile %s = %.2f\n", s->str, v);
             break;
         }
         case S_ARITH: {
@@ -229,8 +245,17 @@ void exec_stmt(const Stmt *s) {
             printf("%d\n", lo + rand() % (hi - lo + 1));
             break;
         }
-        case S_IFPRINT:
-            printf("%s\n", eval_expr(s->a) != 0 ? "true" : "false");
+        case S_BLOCK: {
+            Stmt *p;
+            for (p = s->body; p != NULL; p = p->next) exec_stmt(p);
+            break;
+        }
+        case S_IF:
+            if (eval_expr(s->a) != 0) exec_stmt(s->body);
+            else if (s->body2) exec_stmt(s->body2);
+            break;
+        case S_WHILE:
+            while (eval_expr(s->a) != 0) exec_stmt(s->body);
             break;
         case S_REPEAT: {
             int i, n = (int) eval_expr(s->a);
@@ -271,12 +296,17 @@ void exec_stmt(const Stmt *s) {
 }
 
 void free_stmt(Stmt *s) {
-    if (s == NULL) return;
-    free(s->str);
-    free(s->str2);
-    free_expr(s->a);
-    free_expr(s->b);
-    free_expr(s->c);
-    free_expr(s->d);
-    free(s);
+    while (s != NULL) {
+        Stmt *next = s->next;   /* free this statement and its block siblings */
+        free(s->str);
+        free(s->str2);
+        free_expr(s->a);
+        free_expr(s->b);
+        free_expr(s->c);
+        free_expr(s->d);
+        free_stmt(s->body);
+        free_stmt(s->body2);
+        free(s);
+        s = next;
+    }
 }

@@ -56,14 +56,16 @@ void  free_expr(Expr *e);
 typedef enum {
     S_PRINT_STR,   /* print a string, with an optional trailing value      */
     S_PRINT_EXPR,  /* print a numeric value                                */
-    S_ASSIGN,      /* savovar: define/update a variable                    */
+    S_ASSIGN,      /* savovar: define/update a variable (flag = echo)      */
     S_ARITH,       /* savosum/subtract/moltiplication/divide/mod           */
     S_MATH1,       /* unary math command (sqrt/abs/floor/ceil/round/log..) */
     S_MATH2,       /* binary math command (pow/max/min)                    */
     S_RANDOM,      /* savorandom                                           */
-    S_IFPRINT,     /* savoif (cond): print true/false                      */
     S_REPEAT,      /* savofor N "s" and savowhile N "s"                    */
     S_FORRANGE,    /* savofor (a,b,s) "str" [+|* k]                        */
+    S_BLOCK,       /* a sequence of statements (body of if/while)          */
+    S_IF,          /* savoif (cond) ... [savoelse ...] savoend             */
+    S_WHILE,       /* savowhile (cond) ... savoend                         */
     S_DIR,         /* savodir / savols                                     */
     S_CLS, S_CLEAR, S_HELP, S_QUIT, S_POINTER
 } StmtKind;
@@ -74,25 +76,32 @@ typedef enum { FOR_NONE, FOR_PLUS, FOR_MUL } ForMode;
 typedef struct Stmt {
     StmtKind kind;
     /* generic slots reused per kind; see constructors for meaning */
-    char   *str;
-    char   *str2;
-    Expr   *a;
-    Expr   *b;
-    Expr   *c;
-    Expr   *d;
-    BinOp   op;
-    Builtin fn;
-    ForMode mode;
+    char        *str;
+    char        *str2;
+    Expr        *a;
+    Expr        *b;
+    Expr        *c;
+    Expr        *d;
+    BinOp        op;
+    Builtin      fn;
+    ForMode      mode;
+    int          flag;    /* S_ASSIGN: echo the assignment */
+    struct Stmt *body;    /* S_IF/S_WHILE body, or S_BLOCK statement list head */
+    struct Stmt *body2;   /* S_IF else-branch */
+    struct Stmt *next;    /* next statement in a block */
 } Stmt;
 
 Stmt *stmt_print_str(char *s, Expr *trailing /*nullable*/);
 Stmt *stmt_print_expr(Expr *e);
-Stmt *stmt_assign(char *name, Expr *e);
+Stmt *stmt_assign(char *name, Expr *e, int echo);
+Stmt *stmt_block_new(void);
+void  stmt_block_add(Stmt *block, Stmt *s);   /* appends s to block */
+Stmt *stmt_if(Expr *cond, Stmt *thenb, Stmt *elseb /*nullable*/);
+Stmt *stmt_while(Expr *cond, Stmt *body);
 Stmt *stmt_arith(BinOp op, Expr *a, Expr *b);
 Stmt *stmt_math1(Builtin fn, Expr *a);
 Stmt *stmt_math2(Builtin fn, Expr *a, Expr *b);
 Stmt *stmt_random(Expr *a, Expr *b);
-Stmt *stmt_ifprint(Expr *cond);
 Stmt *stmt_repeat(Expr *count, char *s);
 Stmt *stmt_forrange(Expr *a, Expr *b, Expr *step, char *s, ForMode mode, Expr *k);
 Stmt *stmt_dir(char *arg /*nullable*/);
