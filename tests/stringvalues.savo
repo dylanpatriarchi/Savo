@@ -1,0 +1,18 @@
+# string variables, concatenation, string functions and comparisons
+savovar @a = "foo"
+savovar @b = "bar"
+savoprint @a + @b + "\n"
+savoprint "len=" + savolen(@a + @b) + "\n"
+savoprint savoupper(@a) + " " + savolower("BAZ") + "\n"
+savovar @n = savonum("40") + 2
+savoprint "n=" + @n + "\n"
+savoif ("a" < "b")
+    savoprint "a<b\n"
+savoend
+savoif (@a == "foo")
+    savoprint "match\n"
+savoend
+savodef shout(@s)
+    savoreturn savoupper(@s) + "!"
+savoend
+savoprint shout("hey") + "\n"

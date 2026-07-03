@@ -13,7 +13,7 @@ SRC      := src
 BUILD    := build
 BIN      := savo
 
-CORE_SRCS := $(SRC)/global.c $(SRC)/symtab.c $(SRC)/ast.c
+CORE_SRCS := $(SRC)/global.c $(SRC)/value.c $(SRC)/symtab.c $(SRC)/ast.c
 GEN_SRCS  := $(BUILD)/parser.tab.c $(BUILD)/lex.yy.c
 
 .PHONY: all run example test clean
