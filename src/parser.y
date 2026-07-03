@@ -1,390 +1,193 @@
 %{
   #include <stdio.h>
   #include <stdlib.h>
-  #include <math.h>
   #include <string.h>
-  #include "global.h"
-  #include "symtab.h"
-  #include "statements/printstmt.h"
-  #include "statements/forstmt.h"
-  #include "statements/whilestmt.h"
+  #include "ast.h"
   int yylex(void);
   int yyerror(const char *s);
 %}
 
 %union {
-   char * string;
-   int    number;
-   float  fNumber;
-   void * pVoid;
+   char *string;
+   float fNumber;
+   Expr *expr;
+   Stmt *stmt;
 };
 
-%token DIR HELP PRINT QUIT CLEAR CLS IDENTIFIER FOR WHILE SUM SUBTRACT POINTERCELL MOLTIPLICATION EQUAL IF NOTEQUAL
-%token VAR SQRT POW MAX MIN PLUS MINUS MULTIPLY DIVIDE
-%token ARGUMENT NUMBER STRING EXIT OPENBRACKET CLOSEBRACKET COMMA NEGATION
-%token LS DIVISION MOD ABS RANDOM LT GT LE GE
-%token FLOOR CEIL ROUND LOG LOG10 NEWLINE
+%token DIR HELP PRINT QUIT CLEAR CLS FOR WHILE SUM SUBTRACT POINTERCELL MOLTIPLICATION IF
+%token VAR SQRT POW MAX MIN ABS RANDOM FLOOR CEIL ROUND LOG LOG10 DIVISION MOD LS
+%token OPENBRACKET CLOSEBRACKET COMMA EXIT NEWLINE ASSIGN
+%token EQUAL NOTEQUAL LT GT LE GE
+%token PLUS MINUS MULTIPLY DIVIDE PERCENT NEGATION
+%token <string>  STRING ARGUMENT IDENTIFIER
+%token <fNumber> NUMBER
 
-%type <string>  STRING
-%type <string>  ARGUMENT
-%type <string>  IDENTIFIER
-%type <fNumber> NUMBER
-%type <fNumber> value
+%type <expr> expr atom callexpr ifcond count
+%type <stmt> stmt printstmt varstmt addstmt subtractstmt moltiplicationstmt
+%type <stmt> divisionstmt modstmt sqrtstmt powstmt maxstmt minstmt absstmt
+%type <stmt> floorstmt ceilstmt roundstmt logstmt log10stmt randomstmt
+%type <stmt> ifstmt forstmt whilestmt dirstmt lsstmt pointerstmt
+%type <stmt> helpstmt quitstmt clsstmt clearstmt
+
+%left EQUAL NOTEQUAL LT GT LE GE
+%left PLUS MINUS
+%left MULTIPLY DIVIDE PERCENT
+%right NEGATION
+%right UMINUS
 
 %%
 
 program:
       /* empty */
-    | program line
+    | program topline
     ;
 
 /*
- * Statements are terminated by a newline. Wrapping each line in its own rule
- * gives Bison a synchronisation point: on a syntax error it skips to the next
- * newline and keeps going, so one typo no longer aborts the whole session.
+ * Statements are newline-terminated. Each top-level statement is executed and
+ * freed as soon as it is parsed; 'error NEWLINE' resynchronises after a bad
+ * line so one typo does not abort the session.
  */
-line:
+topline:
       NEWLINE
-    | command NEWLINE
-    | error NEWLINE   { yyerrok; }
+    | stmt NEWLINE     { if ($1) { exec_stmt($1); free_stmt($1); } }
+    | error NEWLINE    { yyerrok; }
     ;
 
-command:
-           printstmt
-         | dirstmt
-         | lsstmt
-         | helpstmt
-         | quitstmt
-         | clsstmt
-         | clearstmt
-         | forstmt
-         | whilestmt
-         | addstmt
-         | subtractstmt
-         | pointerstmt
-         | moltiplicationstmt
-         | divisionstmt
-         | modstmt
-         | absstmt
-         | randomstmt
-         | floorstmt
-         | ceilstmt
-         | roundstmt
-         | logstmt
-         | log10stmt
-         | ifstmt
-         | varstmt
-         | sqrtstmt
-         | powstmt
-         | maxstmt
-         | minstmt
-         ;
-
-/* A numeric operand: either a literal number or a previously defined variable. */
-value:
-      NUMBER              { $$ = $1; }
-    | IDENTIFIER          { $$ = symtab_get($1); free($1); }
+stmt:
+      printstmt | varstmt | dirstmt | lsstmt | helpstmt | quitstmt
+    | clsstmt | clearstmt | forstmt | whilestmt | addstmt | subtractstmt
+    | pointerstmt | moltiplicationstmt | divisionstmt | modstmt | absstmt
+    | randomstmt | floorstmt | ceilstmt | roundstmt | logstmt | log10stmt
+    | ifstmt | sqrtstmt | powstmt | maxstmt | minstmt
     ;
 
-ifstmt:
-      IF OPENBRACKET value EQUAL value CLOSEBRACKET {
-          printf("%s\n", ($3 == $5) ? "true" : "false");
-      }
-    | IF OPENBRACKET value NOTEQUAL value CLOSEBRACKET {
-          printf("%s\n", ($3 != $5) ? "true" : "false");
-      }
-    | IF OPENBRACKET value LT value CLOSEBRACKET {
-          printf("%s\n", ($3 < $5) ? "true" : "false");
-      }
-    | IF OPENBRACKET value GT value CLOSEBRACKET {
-          printf("%s\n", ($3 > $5) ? "true" : "false");
-      }
-    | IF OPENBRACKET value LE value CLOSEBRACKET {
-          printf("%s\n", ($3 <= $5) ? "true" : "false");
-      }
-    | IF OPENBRACKET value GE value CLOSEBRACKET {
-          printf("%s\n", ($3 >= $5) ? "true" : "false");
-      }
-    | IF OPENBRACKET value CLOSEBRACKET {
-          printf("%s\n", ($3 != 0) ? "true" : "false");
-      }
-    | IF OPENBRACKET NEGATION value CLOSEBRACKET {
-          printf("%s\n", ($4 == 0) ? "true" : "false");
-      }
-    | IF OPENBRACKET STRING EQUAL STRING CLOSEBRACKET {
-          printf("%s\n", (strcmp($3, $5) == 0) ? "true" : "false");
-          free($3); free($5);
-      }
-    | IF OPENBRACKET STRING NOTEQUAL STRING CLOSEBRACKET {
-          printf("%s\n", (strcmp($3, $5) != 0) ? "true" : "false");
-          free($3); free($5);
-      }
+/* ------------------------------ expressions ------------------------------ */
+
+expr:
+      atom                        { $$ = $1; }
+    | expr PLUS expr              { $$ = expr_bin(OP_ADD, $1, $3); }
+    | expr MINUS expr             { $$ = expr_bin(OP_SUB, $1, $3); }
+    | expr MULTIPLY expr          { $$ = expr_bin(OP_MUL, $1, $3); }
+    | expr DIVIDE expr            { $$ = expr_bin(OP_DIV, $1, $3); }
+    | expr PERCENT expr           { $$ = expr_bin(OP_MOD, $1, $3); }
+    | expr EQUAL expr             { $$ = expr_bin(OP_EQ, $1, $3); }
+    | expr NOTEQUAL expr          { $$ = expr_bin(OP_NE, $1, $3); }
+    | expr LT expr                { $$ = expr_bin(OP_LT, $1, $3); }
+    | expr GT expr                { $$ = expr_bin(OP_GT, $1, $3); }
+    | expr LE expr                { $$ = expr_bin(OP_LE, $1, $3); }
+    | expr GE expr                { $$ = expr_bin(OP_GE, $1, $3); }
     ;
 
-moltiplicationstmt:
-    MOLTIPLICATION value value {
-        printf("%.2f\n", $2 * $3);
-    }
+atom:
+      NUMBER                          { $$ = expr_num($1); }
+    | IDENTIFIER                      { $$ = expr_var($1); }
+    | OPENBRACKET expr CLOSEBRACKET   { $$ = $2; }
+    | MINUS atom %prec UMINUS         { $$ = expr_neg($2); }
+    | NEGATION atom                   { $$ = expr_not($2); }
+    | callexpr                        { $$ = $1; }
     ;
 
-divisionstmt:
-    DIVISION value value {
-        if ($3 == 0) {
-            fprintf(stderr, "savo: division by zero\n");
-        } else {
-            printf("%.2f\n", $2 / $3);
-        }
-    }
+/* Built-in functions usable inside expressions, e.g. savosqrt(x), savopow(a,b). */
+callexpr:
+      SQRT  OPENBRACKET expr CLOSEBRACKET               { $$ = expr_call(FN_SQRT, $3, NULL); }
+    | ABS   OPENBRACKET expr CLOSEBRACKET               { $$ = expr_call(FN_ABS, $3, NULL); }
+    | FLOOR OPENBRACKET expr CLOSEBRACKET               { $$ = expr_call(FN_FLOOR, $3, NULL); }
+    | CEIL  OPENBRACKET expr CLOSEBRACKET               { $$ = expr_call(FN_CEIL, $3, NULL); }
+    | ROUND OPENBRACKET expr CLOSEBRACKET               { $$ = expr_call(FN_ROUND, $3, NULL); }
+    | LOG   OPENBRACKET expr CLOSEBRACKET               { $$ = expr_call(FN_LOG, $3, NULL); }
+    | LOG10 OPENBRACKET expr CLOSEBRACKET               { $$ = expr_call(FN_LOG10, $3, NULL); }
+    | POW   OPENBRACKET expr COMMA expr CLOSEBRACKET    { $$ = expr_call(FN_POW, $3, $5); }
+    | MAX   OPENBRACKET expr COMMA expr CLOSEBRACKET    { $$ = expr_call(FN_MAX, $3, $5); }
+    | MIN   OPENBRACKET expr COMMA expr CLOSEBRACKET    { $$ = expr_call(FN_MIN, $3, $5); }
+    | RANDOM OPENBRACKET expr COMMA expr CLOSEBRACKET   { $$ = expr_call(FN_RANDOM, $3, $5); }
     ;
 
-modstmt:
-    MOD value value {
-        if ($3 == 0) {
-            fprintf(stderr, "savo: modulo by zero\n");
-        } else {
-            printf("%.2f\n", fmodf($2, $3));
-        }
-    }
+/* A loop count: a bare number or variable (no leading '(' so it never clashes
+ * with the parenthesised range form of savofor). */
+count:
+      NUMBER      { $$ = expr_num($1); }
+    | IDENTIFIER  { $$ = expr_var($1); }
     ;
 
-absstmt:
-    ABS value {
-        printf("%.2f\n", fabsf($2));
-    }
+/* A condition: a numeric expression (truthy) or a string comparison. */
+ifcond:
+      expr                          { $$ = $1; }
+    | STRING EQUAL STRING           { $$ = expr_strcmp(0, $1, $3); }
+    | STRING NOTEQUAL STRING        { $$ = expr_strcmp(1, $1, $3); }
     ;
 
-floorstmt:
-    FLOOR value {
-        printf("%.2f\n", floorf($2));
-    }
-    ;
-
-ceilstmt:
-    CEIL value {
-        printf("%.2f\n", ceilf($2));
-    }
-    ;
-
-roundstmt:
-    ROUND value {
-        printf("%.2f\n", roundf($2));
-    }
-    ;
-
-logstmt:
-    LOG value {
-        if ($2 <= 0) {
-            fprintf(stderr, "savo: log of a non-positive value\n");
-        } else {
-            printf("%.4f\n", logf($2));
-        }
-    }
-    ;
-
-log10stmt:
-    LOG10 value {
-        if ($2 <= 0) {
-            fprintf(stderr, "savo: log10 of a non-positive value\n");
-        } else {
-            printf("%.4f\n", log10f($2));
-        }
-    }
-    ;
-
-randomstmt:
-    RANDOM value value {
-        int lo = (int) $2;
-        int hi = (int) $3;
-        if (hi < lo) { int t = lo; lo = hi; hi = t; }
-        printf("%d\n", lo + rand() % (hi - lo + 1));
-    }
-    ;
-
-pointerstmt:
-    POINTERCELL STRING {
-        printf("%s: %p\n", $2, (void *) $2);
-        free($2);
-    }
-    ;
-
-addstmt:
-    SUM value value {
-        printf("%.2f\n", $2 + $3);
-    }
-    ;
-
-subtractstmt:
-    SUBTRACT value value {
-        printf("%.2f\n", $2 - $3);
-    }
-    ;
+/* ------------------------------ statements ------------------------------ */
 
 printstmt:
-      PRINT STRING {
-          printStatement($2);
-          if (strlen(prompt) > 0) printf("\n");
-          free($2);
-      }
-    | PRINT STRING PLUS value {
-          printf("%s%.2f", $2, $4);
-          if (strlen(prompt) > 0) printf("\n");
-          free($2);
-      }
-    | PRINT value {
-          printf("%.2f", $2);
-          if (strlen(prompt) > 0) printf("\n");
-      }
+      PRINT STRING                  { $$ = stmt_print_str($2, NULL); }
+    | PRINT STRING PLUS expr        { $$ = stmt_print_str($2, $4); }
+    | PRINT expr                    { $$ = stmt_print_expr($2); }
     ;
 
-dirstmt:
-      DIR ARGUMENT {
-          if (strlen(prompt) > 0) {
-              char cmd[600];
-              snprintf(cmd, sizeof cmd, "ls %s", $2);
-              system(cmd);
-          }
-          free($2);
-      }
-    | DIR { if (strlen(prompt) > 0) system("ls"); }
+varstmt:
+      VAR IDENTIFIER expr           { $$ = stmt_assign($2, $3); }
+    | VAR IDENTIFIER ASSIGN expr    { $$ = stmt_assign($2, $4); }
     ;
 
-lsstmt:
-      LS ARGUMENT {
-          if (strlen(prompt) > 0) {
-              char cmd[600];
-              snprintf(cmd, sizeof cmd, "ls %s", $2);
-              system(cmd);
-          }
-          free($2);
-      }
-    | LS { if (strlen(prompt) > 0) system("ls"); }
-    ;
+addstmt:            SUM atom atom            { $$ = stmt_arith(OP_ADD, $2, $3); } ;
+subtractstmt:       SUBTRACT atom atom       { $$ = stmt_arith(OP_SUB, $2, $3); } ;
+moltiplicationstmt: MOLTIPLICATION atom atom { $$ = stmt_arith(OP_MUL, $2, $3); } ;
+divisionstmt:       DIVISION atom atom       { $$ = stmt_arith(OP_DIV, $2, $3); } ;
+modstmt:            MOD atom atom            { $$ = stmt_arith(OP_MOD, $2, $3); } ;
 
-helpstmt:
-    HELP {
-        printf("\n");
-        printf("savocls\t\t\t\t\tclear screen (windows)\n");
-        printf("savoclear\t\t\t\tclear screen (linux/macOS)\n");
-        printf("savodir\t\t<arguments>\t\tlist files (alias of ls)\n");
-        printf("savols\t\t<arguments>\t\tlist files in directory\n");
-        printf("savoprint\t<\"string\">\t\tprint a string literal\n");
-        printf("savoprint\t<value>\t\t\tprint a number or variable\n");
-        printf("savoprint\t<\"string\"> + <value>\tprint a string followed by a value\n");
-        printf("savovar\t\t<@name> <value>\t\tdefine or update a variable\n");
-        printf("savofor\t\t<count> <\"string\">\trepeat a string count times\n");
-        printf("savofor\t\t(a, b, s) <\"string\">\tC-style loop from a to b step s\n");
-        printf("savowhile\t<count> <\"string\">\trepeat a string count times\n");
-        printf("savosum\t\t<value> <value>\t\tadd two values\n");
-        printf("savosubtract\t<value> <value>\t\tsubtract two values\n");
-        printf("savomoltiplication <value> <value>\tmultiply two values\n");
-        printf("savodivide\t<value> <value>\t\tdivide two values\n");
-        printf("savomod\t\t<value> <value>\t\tmodulo of two values\n");
-        printf("savosqrt\t<value>\t\t\tsquare root\n");
-        printf("savopow\t\t<base> <exp>\t\tpower function\n");
-        printf("savoabs\t\t<value>\t\t\tabsolute value\n");
-        printf("savofloor\t<value>\t\t\tround down\n");
-        printf("savoceil\t<value>\t\t\tround up\n");
-        printf("savoround\t<value>\t\t\tround to nearest\n");
-        printf("savolog\t\t<value>\t\t\tnatural logarithm\n");
-        printf("savolog10\t<value>\t\t\tbase-10 logarithm\n");
-        printf("savomax\t\t<value> <value>\t\tmaximum of two values\n");
-        printf("savomin\t\t<value> <value>\t\tminimum of two values\n");
-        printf("savorandom\t<min> <max>\t\trandom integer in [min, max]\n");
-        printf("savoif\t\t(<value> <op> <value>)\tcompare with == != < > <= >=\n");
-        printf("savopointercell\t<\"string\">\t\tprint the string's memory address\n");
-        printf("savoquit | savoexit\t\t\texit this program\n");
-        printf("\n");
-    }
-    ;
+sqrtstmt:   SQRT atom    { $$ = stmt_math1(FN_SQRT, $2); } ;
+absstmt:    ABS atom     { $$ = stmt_math1(FN_ABS, $2); } ;
+floorstmt:  FLOOR atom   { $$ = stmt_math1(FN_FLOOR, $2); } ;
+ceilstmt:   CEIL atom    { $$ = stmt_math1(FN_CEIL, $2); } ;
+roundstmt:  ROUND atom   { $$ = stmt_math1(FN_ROUND, $2); } ;
+logstmt:    LOG atom     { $$ = stmt_math1(FN_LOG, $2); } ;
+log10stmt:  LOG10 atom   { $$ = stmt_math1(FN_LOG10, $2); } ;
 
-quitstmt:
-      QUIT { exit(0); }
-    | EXIT { exit(0); }
-    ;
+powstmt:    POW atom atom { $$ = stmt_math2(FN_POW, $2, $3); } ;
+maxstmt:    MAX atom atom { $$ = stmt_math2(FN_MAX, $2, $3); } ;
+minstmt:    MIN atom atom { $$ = stmt_math2(FN_MIN, $2, $3); } ;
 
-clsstmt:
-    CLS {
-        if (strlen(prompt) > 0) {
-            system("cls");
-            printf("%s", consoleMex);
-        }
-    }
-    ;
+randomstmt: RANDOM atom atom { $$ = stmt_random($2, $3); } ;
 
-clearstmt:
-    CLEAR {
-        if (strlen(prompt) > 0) {
-            system("clear");
-            printf("%s", consoleMex);
-        }
-    }
+ifstmt:
+    IF OPENBRACKET ifcond CLOSEBRACKET  { $$ = stmt_ifprint($3); }
     ;
 
 forstmt:
-      FOR value STRING {
-          forStatement((int) $2, $3);
-          free($3);
+      FOR count STRING {
+          $$ = stmt_repeat($2, $3);
       }
-    | FOR OPENBRACKET value COMMA value COMMA value CLOSEBRACKET STRING {
-          int i;
-          for (i = (int) $3; i < (int) $5; i += (int) $7) {
-              printf("%s\n", $9);
-          }
-          free($9);
+    | FOR OPENBRACKET atom COMMA atom COMMA atom CLOSEBRACKET STRING {
+          $$ = stmt_forrange($3, $5, $7, $9, FOR_NONE, NULL);
       }
-    | FOR OPENBRACKET value COMMA value COMMA value CLOSEBRACKET STRING PLUS value {
-          int i;
-          for (i = (int) $3; i < (int) $5; i += (int) $7) {
-              printf("%s%.0f\n", $9, i + $11);
-          }
-          free($9);
+    | FOR OPENBRACKET atom COMMA atom COMMA atom CLOSEBRACKET STRING PLUS atom {
+          $$ = stmt_forrange($3, $5, $7, $9, FOR_PLUS, $11);
       }
-    | FOR OPENBRACKET value COMMA value COMMA value CLOSEBRACKET STRING MULTIPLY value {
-          int i;
-          for (i = (int) $3; i < (int) $5; i += (int) $7) {
-              printf("%s%.0f\n", $9, i * $11);
-          }
-          free($9);
+    | FOR OPENBRACKET atom COMMA atom COMMA atom CLOSEBRACKET STRING MULTIPLY atom {
+          $$ = stmt_forrange($3, $5, $7, $9, FOR_MUL, $11);
       }
     ;
 
 whilestmt:
-    WHILE value STRING {
-        whileStatement((int) $2, $3);
-        free($3);
-    }
+    WHILE count STRING  { $$ = stmt_repeat($2, $3); }
     ;
 
-varstmt:
-    VAR IDENTIFIER value {
-        symtab_set($2, $3);
-        printf("Variabile %s = %.2f\n", $2, $3);
-        free($2);
-    }
+dirstmt:
+      DIR ARGUMENT  { $$ = stmt_dir($2); }
+    | DIR           { $$ = stmt_dir(NULL); }
     ;
 
-sqrtstmt:
-    SQRT value {
-        printf("%s%.2f = %.2f\n", "√", $2, sqrtf($2));
-    }
+lsstmt:
+      LS ARGUMENT   { $$ = stmt_dir($2); }
+    | LS            { $$ = stmt_dir(NULL); }
     ;
 
-powstmt:
-    POW value value {
-        printf("%.2f^%.2f = %.2f\n", $2, $3, powf($2, $3));
-    }
-    ;
+pointerstmt: POINTERCELL STRING { $$ = stmt_pointer($2); } ;
 
-maxstmt:
-    MAX value value {
-        printf("max(%.2f, %.2f) = %.2f\n", $2, $3, ($2 > $3) ? $2 : $3);
-    }
-    ;
-
-minstmt:
-    MIN value value {
-        printf("min(%.2f, %.2f) = %.2f\n", $2, $3, ($2 < $3) ? $2 : $3);
-    }
-    ;
+helpstmt:   HELP  { $$ = stmt_simple(S_HELP); } ;
+quitstmt:   QUIT  { $$ = stmt_simple(S_QUIT); }
+          | EXIT  { $$ = stmt_simple(S_QUIT); } ;
+clsstmt:    CLS   { $$ = stmt_simple(S_CLS); } ;
+clearstmt:  CLEAR { $$ = stmt_simple(S_CLEAR); } ;
 
 %%
