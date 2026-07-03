@@ -13,8 +13,7 @@ SRC      := src
 BUILD    := build
 BIN      := savo
 
-CORE_SRCS := $(SRC)/global.c $(SRC)/symtab.c
-STMT_SRCS := $(wildcard $(SRC)/statements/*.c)
+CORE_SRCS := $(SRC)/global.c $(SRC)/symtab.c $(SRC)/ast.c
 GEN_SRCS  := $(BUILD)/parser.tab.c $(BUILD)/lex.yy.c
 
 .PHONY: all run example test clean
@@ -31,8 +30,8 @@ $(BUILD)/parser.tab.c $(BUILD)/parser.tab.h: $(SRC)/parser.y | $(BUILD)
 $(BUILD)/lex.yy.c: $(SRC)/lexer.l $(BUILD)/parser.tab.h | $(BUILD)
 	flex -o $(BUILD)/lex.yy.c $(SRC)/lexer.l
 
-$(BIN): $(GEN_SRCS) $(CORE_SRCS) $(STMT_SRCS)
-	$(CC) $(CFLAGS) $(GEN_SRCS) $(CORE_SRCS) $(STMT_SRCS) -o $(BIN) $(LDLIBS)
+$(BIN): $(GEN_SRCS) $(CORE_SRCS)
+	$(CC) $(CFLAGS) $(GEN_SRCS) $(CORE_SRCS) -o $(BIN) $(LDLIBS)
 
 run: $(BIN)
 	./$(BIN)
