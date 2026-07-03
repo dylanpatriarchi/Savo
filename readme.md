@@ -59,16 +59,17 @@ its line number and the interpreter keeps going with the next line.
 | Arithmetic  | `savosum`, `savosubtract`, `savomoltiplication`, `savodivide`, `savomod` |
 | Math        | `savosqrt`, `savopow`, `savoabs`, `savofloor`, `savoceil`, `savoround`, `savolog`, `savolog10`, `savomax`, `savomin`, `savorandom` |
 | Strings     | `savolen`, `savoupper`, `savolower`, `savostr`, `savonum` (+ `+` concatenation) |
+| Arrays      | `[ … ]` literals, `@a[i]` indexing, `savopush`, `savoset`, `savolen` |
 | Control     | `savoif`/`savoelse`/`savoend`, `savowhile`, `savofor` |
 | Functions   | `savodef`/`savoreturn` |
 | Console     | `savodir`, `savols`, `savocls`, `savoclear`, `savopointercell`, `savohelp`, `savoquit`, `savoexit` |
 
-Values are **dynamically typed** — a variable holds a number or a string.
-Anywhere a value is expected you can write a full **expression**: `+ - * / %`,
-comparisons, `!`, parentheses and nested function calls such as
-`savosqrt(@x * @x + 9)`. `+` adds numbers and **concatenates** when either side
-is a string. See [`docs/LANGUAGE.md`](docs/LANGUAGE.md) for the complete
-reference.
+Values are **dynamically typed** — a variable holds a number, a string, or an
+array. Anywhere a value is expected you can write a full **expression**:
+`+ - * / %`, comparisons, `!`, parentheses, subscripts `@a[i]` and nested
+function calls such as `savosqrt(@x * @x + 9)`. `+` adds numbers and
+**concatenates** when either side is a string. Arrays are mutable and shared by
+reference. See [`docs/LANGUAGE.md`](docs/LANGUAGE.md) for the complete reference.
 
 ### A quick tour
 
@@ -77,6 +78,10 @@ savovar @x = (3 + 4) * 2      # expressions with precedence -> 14
 savoprint "x = " + @x + "\n"  # strings concatenate with +
 savovar @who = "world"
 savoprint savoupper("hi " + @who) + "\n"   # HI WORLD
+
+savovar @nums = [3, 1, 4]     # arrays
+savopush @nums 1
+savoprint "nums has " + savolen(@nums) + " items\n"
 
 savodef fact(@n)              # recursive function
     savoif (@n <= 1)

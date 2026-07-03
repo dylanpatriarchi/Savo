@@ -11,6 +11,7 @@ all valid).
 - [Values and variables](#values-and-variables)
 - [Expressions](#expressions)
 - [Strings](#strings)
+- [Arrays](#arrays)
 - [Output](#output)
 - [Arithmetic](#arithmetic)
 - [Math functions](#math-functions)
@@ -116,6 +117,54 @@ savovar @total = savonum("40") + 2               # 42  (numeric)
 > Printing a **string** writes it verbatim (you control newlines with `\n`),
 > while printing a **number** appends a newline for convenience. So a line built
 > by concatenation, like `savoprint "n = " + @n`, should end with `+ "\n"`.
+
+## Arrays
+
+Arrays are ordered, growable lists written with square brackets. Elements can be
+any value — numbers, strings, or other arrays (so you can nest them):
+
+```savo
+savovar @nums = [3, 1, 4, 1, 5]
+savovar @mixed = [1, "two", [3, 4]]
+```
+
+Read an element with `@a[i]` (zero-based); chain subscripts for nested arrays:
+
+```savo
+savoprint @nums[0] + "\n"        # 3.00
+savoprint @mixed[2][1] + "\n"    # 4.00
+```
+
+Mutate arrays with these statements:
+
+| Statement | Effect |
+|-----------|--------|
+| `savopush @a <expr>`      | append a value |
+| `savoset @a[i] = <expr>`  | replace the element at index `i` (growing with zeros if needed) |
+
+`savolen(@a)` returns the element count, which makes iteration easy:
+
+```savo
+savovar @i = 0
+savovar @sum = 0
+savowhile (@i < savolen(@nums))
+    savovar @sum = @sum + @nums[@i]
+    savovar @i = @i + 1
+savoend
+savoprint "sum = " + @sum + "\n"
+```
+
+Arrays are **shared by reference**: assigning an array to another variable, or
+passing it to a function, shares the same underlying list rather than copying
+it, so a `savopush` through one name is visible through the others. This is what
+lets you build linked structures like trees and graphs.
+
+```savo
+savovar @a = [1, 2]
+savovar @b = @a
+savopush @b 3
+savoprint savolen(@a) + "\n"     # 3.00 — @a and @b are the same array
+```
 
 ## Output
 
@@ -295,6 +344,8 @@ terminal it runs the interactive REPL with the banner and `>>>` prompt.
 | `savovar` | `<@name> <expr>` (echo) or `<@name> = <expr>` (silent) | Define or update a variable |
 | `savolen` / `savoupper` / `savolower` | `(<expr>)` | String length / upper / lower |
 | `savostr` / `savonum` | `(<expr>)` | Convert number↔string |
+| `savopush` | `@a <expr>` | Append to an array |
+| `savoset` | `@a[i] = <expr>` | Set an array element |
 | `savosum` | `<value> <value>` | Add |
 | `savosubtract` | `<value> <value>` | Subtract |
 | `savomoltiplication` | `<value> <value>` | Multiply |
