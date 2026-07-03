@@ -1,4 +1,4 @@
-savoprint "=== SAVO 3.3 — FEATURE TOUR ===\n\n"
+savoprint "=== SAVO 3.4 — FEATURE TOUR ===\n\n"
 
 savoprint "1. Variables and expressions:\n"
 savovar @x 42
@@ -61,5 +61,12 @@ savoend
 savoprint "sum of nums = " + @sum + "\n"
 savovar @matrix = [[1, 2], [3, 4]]
 savoprint "matrix[1][0] = " + @matrix[1][0] + "\n"
+
+savoprint "8. Objects (string-keyed maps):\n"
+savovar @user = {name: "Ada", age: 36}
+savoset @user.age = 37
+savoprint "name = " + @user.name + ", age = " + @user.age + "\n"
+savovar @point = {x: 3, y: 4}
+savoprint "distance = " + savosqrt(@point.x * @point.x + @point.y * @point.y) + "\n"
 
 savoprint "\n=== END OF TOUR ===\n"
