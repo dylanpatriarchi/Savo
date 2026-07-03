@@ -25,6 +25,7 @@ Linux).
 make            # build the ./savo interpreter
 make run        # build, then start the interactive REPL
 make example    # build, then run examples/demo.savo
+make test       # build, then run the golden-file test suite
 make clean      # remove build artifacts
 ```
 
@@ -33,20 +34,19 @@ by git.
 
 ## Usage
 
-Start an interactive session:
-
 ```sh
-./savo
+./savo                     # start the interactive REPL
+./savo examples/demo.savo  # run a script file
+./savo -e 'savosum 2 3'    # evaluate code inline
+echo 'savosum 2 3' | ./savo -   # read a script from stdin
+./savo --version           # print the version
+./savo --help              # print usage
 ```
 
-Run a script file:
-
-```sh
-./savo examples/demo.savo
-```
-
-Inside the REPL, type `savohelp` for the full command list and `savoquit` (or
-`savoexit`) to leave.
+When stdin is not a terminal (a pipe or a file), Savo runs in quiet script mode:
+no banner and no auto-inserted newlines. Inside the REPL, type `savohelp` for the
+full command list and `savoquit` (or `savoexit`) to leave. A syntax error reports
+its line number and the interpreter keeps going with the next line.
 
 ## Language at a glance
 
@@ -55,7 +55,7 @@ Inside the REPL, type `savohelp` for the full command list and `savoquit` (or
 | Output      | `savoprint` |
 | Variables   | `savovar` |
 | Arithmetic  | `savosum`, `savosubtract`, `savomoltiplication`, `savodivide`, `savomod` |
-| Math        | `savosqrt`, `savopow`, `savoabs`, `savomax`, `savomin`, `savorandom` |
+| Math        | `savosqrt`, `savopow`, `savoabs`, `savofloor`, `savoceil`, `savoround`, `savolog`, `savolog10`, `savomax`, `savomin`, `savorandom` |
 | Control     | `savoif`, `savofor`, `savowhile` |
 | Console     | `savodir`, `savols`, `savocls`, `savoclear`, `savopointercell`, `savohelp`, `savoquit`, `savoexit` |
 

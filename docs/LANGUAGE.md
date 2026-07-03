@@ -14,6 +14,8 @@ all valid).
 - [Math functions](#math-functions)
 - [Control flow](#control-flow)
 - [Console commands](#console-commands)
+- [Command-line interface](#command-line-interface)
+- [Error handling](#error-handling)
 - [Full command list](#full-command-list)
 
 ## Lexical elements
@@ -48,6 +50,7 @@ Referencing an undefined variable prints a warning to stderr and evaluates to
 ```savo
 savoprint "hello world\n"          # print a string literal
 savoprint "score: " + @x           # print a string followed by a value
+savoprint @x                       # print a number or variable directly
 ```
 
 In interactive mode `savoprint` appends a newline automatically; when running a
@@ -73,10 +76,17 @@ Division and modulo by zero print an error to stderr instead of crashing.
 savosqrt 144        # √144.00 = 12.00
 savopow 2 10        # 2.00^10.00 = 1024.00
 savoabs -9          # 9.00
+savofloor 3.7       # 3.00
+savoceil 3.2        # 4.00
+savoround 3.5       # 4.00
+savolog 2.71828     # 1.0000  (natural logarithm)
+savolog10 1000      # 3.0000  (base-10 logarithm)
 savomax 3 8         # max(3.00, 8.00) = 8.00
 savomin 3 8         # min(3.00, 8.00) = 3.00
 savorandom 1 100    # a random integer in [1, 100]
 ```
+
+`savolog` and `savolog10` report an error on stderr for non-positive input.
 
 `savorandom` swaps its bounds if given in reverse order, so `savorandom 100 1`
 works too.
@@ -127,11 +137,36 @@ savohelp            # show the built-in command summary
 savoquit            # exit (alias: savoexit)
 ```
 
+## Command-line interface
+
+```sh
+savo                     # interactive REPL (when stdin is a terminal)
+savo script.savo         # run a script file
+savo -e '<code>'         # evaluate code passed on the command line
+savo -                   # read a script from stdin
+savo -h | --help         # usage
+savo -v | --version      # version
+```
+
+When stdin is a pipe or a file, Savo runs in **quiet script mode**: it prints no
+banner and does not auto-insert newlines after `savoprint`. When stdin is a
+terminal it runs the interactive REPL with the banner and `>>>` prompt.
+
+## Error handling
+
+- A **syntax error** prints `savo: line N: syntax error` to stderr and the
+  interpreter resumes at the next line, so a single typo does not abort a run.
+- **Undefined variables** warn on stderr and evaluate to `0`.
+- **Division / modulo by zero** and **log of a non-positive number** warn on
+  stderr and produce no result line.
+- The process **exit status** is `0` on success, `1` if any error was reported,
+  and `2` for a bad command-line invocation.
+
 ## Full command list
 
 | Command | Arguments | Effect |
 |---------|-----------|--------|
-| `savoprint` | `<"string">` or `<"string"> + <value>` | Print a string, optionally followed by a value |
+| `savoprint` | `<"string">`, `<value>`, or `<"string"> + <value>` | Print a string and/or a value |
 | `savovar` | `<@name> <value>` | Define or update a variable |
 | `savosum` | `<value> <value>` | Add |
 | `savosubtract` | `<value> <value>` | Subtract |
@@ -141,6 +176,11 @@ savoquit            # exit (alias: savoexit)
 | `savosqrt` | `<value>` | Square root |
 | `savopow` | `<base> <exp>` | Power |
 | `savoabs` | `<value>` | Absolute value |
+| `savofloor` | `<value>` | Round down |
+| `savoceil` | `<value>` | Round up |
+| `savoround` | `<value>` | Round to nearest |
+| `savolog` | `<value>` | Natural logarithm |
+| `savolog10` | `<value>` | Base-10 logarithm |
 | `savomax` | `<value> <value>` | Maximum |
 | `savomin` | `<value> <value>` | Minimum |
 | `savorandom` | `<min> <max>` | Random integer in range |
