@@ -3,6 +3,9 @@
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
+#include <dirent.h>
+#include <fnmatch.h>
+#include <sys/stat.h>
 #include "ast.h"
 #include "value.h"
 #include "global.h"
@@ -446,6 +449,62 @@ Stmt *stmt_forrange(Expr *a, Expr *b, Expr *step, char *str, ForMode mode, Expr 
 
 static int interactive(void) { return strlen(prompt) > 0; }
 
+/* List a directory without a shell, so a savodir/savols argument can never be
+ * interpreted as a command (the old system("ls %s") allowed `savols ; rm -rf ~`).
+ * An argument naming a directory lists it; otherwise it is treated as a glob
+ * pattern (optionally with a leading directory) matched against entry names. */
+static void list_dir(const char *arg) {
+    const char *dir = ".";
+    const char *pat = NULL;
+    char        dirbuf[1024];
+    char        argbuf[1024];
+    struct dirent **names;
+    int n, i;
+
+    /* The lexer hands over the raw rest of the line, so a quoted argument such
+     * as savols "*.md" arrives with its quotes; strip a matched surrounding
+     * pair (the shell used to do this before we dropped system()). */
+    if (arg != NULL) {
+        size_t alen = strlen(arg);
+        if (alen >= 2 && arg[0] == '"' && arg[alen - 1] == '"') {
+            size_t inner = alen - 2;
+            if (inner >= sizeof argbuf) inner = sizeof argbuf - 1;
+            memcpy(argbuf, arg + 1, inner);
+            argbuf[inner] = '\0';
+            arg = argbuf;
+        }
+    }
+
+    if (arg != NULL && *arg != '\0') {
+        struct stat st;
+        if (stat(arg, &st) == 0 && S_ISDIR(st.st_mode)) {
+            dir = arg;
+        } else {
+            const char *slash = strrchr(arg, '/');
+            if (slash != NULL) {
+                size_t plen = (size_t) (slash - arg);
+                if (plen >= sizeof dirbuf) plen = sizeof dirbuf - 1;
+                memcpy(dirbuf, arg, plen);
+                dirbuf[plen] = '\0';
+                dir = dirbuf[0] ? dirbuf : "/";
+                pat = slash + 1;
+            } else {
+                pat = arg;
+            }
+        }
+    }
+
+    n = scandir(dir, &names, NULL, alphasort);
+    if (n < 0) { fprintf(stderr, "savo: cannot list '%s'\n", dir); return; }
+    for (i = 0; i < n; i++) {
+        const char *nm = names[i]->d_name;
+        int show = pat ? fnmatch(pat, nm, 0) == 0 : nm[0] != '.';
+        if (show) printf("%s\n", nm);
+        free(names[i]);
+    }
+    free(names);
+}
+
 static void print_help(void) {
     printf("\n");
     printf("savoprint\t<expr>\t\t\t\tprint a value (string or number)\n");
@@ -585,10 +644,7 @@ void exec_stmt(const Stmt *s) {
             break;
         }
         case S_DIR:
-            if (interactive()) {
-                if (s->str) { char cmd[600]; snprintf(cmd, sizeof cmd, "ls %s", s->str); system(cmd); }
-                else system("ls");
-            }
+            if (interactive()) list_dir(s->str);
             break;
         case S_CLS:
             if (interactive()) { system("cls"); printf("%s", consoleMex); }
