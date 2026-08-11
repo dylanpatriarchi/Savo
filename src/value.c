@@ -128,9 +128,17 @@ Value array_get(Value v, int i) {
     return value_copy(a->items[i]);
 }
 
+/* Largest zero-fill gap a single savoset may open, so `savoset @a[huge] = x`
+ * cannot exhaust time and memory growing the array one element at a time. */
+#define ARRAY_MAX_GROW (1 << 20)
+
 void array_set(Value v, int i, Value elem) {
     Array *a = v.as.arr;
     if (i < 0) { fprintf(stderr, "savo: array index %d out of range\n", i); return; }
+    if (i > a->count && i - a->count > ARRAY_MAX_GROW) {
+        fprintf(stderr, "savo: array index %d too far past the end to grow to\n", i);
+        return;
+    }
     while (a->count <= i) array_push(v, value_num(0));   /* grow with zeros */
     value_free(a->items[i]);
     a->items[i] = value_copy(elem);
