@@ -250,10 +250,20 @@ savopush @kids {value: 2, children: []}
 savoprint @node.children[0].value + "\n"   # 2.00
 ```
 
-> `savopush` and `savoset`'s left side name a plain variable. To mutate a nested
-> collection like `@node.children`, bind it to a variable first (`savovar @kids =
-> @node.children`) — the reference is shared, so the change is reflected in the
-> parent.
+`savoset` accepts a **chained target**, so you can assign into nested arrays and
+objects at any depth without binding intermediates to a variable:
+
+```savo
+savovar @tree = {root: {kids: [10, 20, 30]}}
+savoset @tree.root.kids[1] = 99        # nested index
+savoset @tree.root.name = "top"        # nested new field
+savovar @grid = [[0, 0], [0, 0]]
+savoset @grid[0][1] = 5                # 2-D array
+```
+
+> `savopush`'s left side still names a plain variable. To append to a nested
+> collection like `@node.children`, bind it first (`savovar @kids =
+> @node.children`) — the reference is shared, so the change reaches the parent.
 
 ## Output
 
@@ -516,7 +526,7 @@ terminal it runs the interactive REPL with the banner and `>>>` prompt.
 | `savocontains` | `(coll, x)` | Membership in an array/string/object |
 | `savokeys` | `(@o)` | Object keys as an array |
 | `savoinput` | `([prompt])` | Read a line from standard input |
-| `savoset` | `@a[i] = <expr>` / `@o.k = <expr>` | Set an array element or object field |
+| `savoset` | `<lvalue> = <expr>` (e.g. `@a[i]`, `@o.k`, `@t.a.b[i]`) | Set an array element or object field, at any nesting depth |
 | `savoforeach` | `@item <coll> … savoend` | Iterate an array or object |
 | `savosum` | `<value> <value>` | Add |
 | `savosubtract` | `<value> <value>` | Subtract |
