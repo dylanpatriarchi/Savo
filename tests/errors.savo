@@ -1,0 +1,18 @@
+# Runtime errors warn on stderr and the interpreter keeps going; this checks the
+# stdout that recovery produces (stderr is ignored by the test runner).
+savoprint @undefined_var
+savoprint "after undefined\n"
+
+savodivide 10 0
+savoprint "after div by zero\n"
+
+savovar @a = [1, 2, 3]
+savoprint @a[99]
+savoprint "after out-of-range index\n"
+
+savoprint savosqrt(0 - 4)
+savoprint "after sqrt of negative\n"
+
+savovar @o = {x: 1}
+savoprint @o["missing"]
+savoprint "after missing key\n"
