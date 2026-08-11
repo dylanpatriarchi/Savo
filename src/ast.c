@@ -647,10 +647,10 @@ void exec_stmt(const Stmt *s) {
             if (interactive()) list_dir(s->str);
             break;
         case S_CLS:
-            if (interactive()) { system("cls"); printf("%s", consoleMex); }
-            break;
         case S_CLEAR:
-            if (interactive()) { system("clear"); printf("%s", consoleMex); }
+            /* ANSI erase-screen + cursor-home: portable and shell-free, unlike
+             * system("cls") (which does not even exist on Unix). */
+            if (interactive()) { printf("\033[2J\033[H%s", consoleMex); }
             break;
         case S_HELP:
             print_help();
