@@ -11,10 +11,11 @@
 #include "global.h"
 #include "symtab.h"
 
-extern int had_error;   /* defined in the lexer; set when a runtime error occurs */
+extern int had_error;   /* defined in main.c; set when a runtime error occurs */
 
 static void runtime_error(const char *msg) {
-    fprintf(stderr, "savo: %s\n", msg);
+    if (savo_line > 0) fprintf(stderr, "savo: line %d: %s\n", savo_line, msg);
+    else fprintf(stderr, "savo: %s\n", msg);
     had_error = 1;
 }
 
@@ -721,6 +722,7 @@ static void print_help(void) {
 
 void exec_stmt(const Stmt *s) {
     if (s == NULL) return;
+    if (s->line > 0) savo_line = s->line;   /* track for runtime diagnostics */
     switch (s->kind) {
         case S_PRINT_EXPR: {
             Value v = eval_expr(s->a);

@@ -403,7 +403,7 @@ static Stmt *parse_funcdef(Parser *P) {
     return stmt_funcdef(name, params, body);
 }
 
-static Stmt *parse_statement(Parser *P, int allow_def) {
+static Stmt *parse_statement_inner(Parser *P, int allow_def) {
     switch (P->cur.kind) {
         case TK_PRINT:   p_advance(P); return stmt_print_expr(parse_expr(P));
         case TK_VAR: {
@@ -466,6 +466,14 @@ static Stmt *parse_statement(Parser *P, int allow_def) {
             perror_at(P, "unexpected token at the start of a statement");
             return NULL;
     }
+}
+
+/* Stamp each statement with its source line for runtime error messages. */
+static Stmt *parse_statement(Parser *P, int allow_def) {
+    int line = P->cur.line;
+    Stmt *s = parse_statement_inner(P, allow_def);
+    if (s != NULL) s->line = line;
+    return s;
 }
 
 /* newline-separated statements until savoend / savoelse / EOF */
