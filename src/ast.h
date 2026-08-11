@@ -92,6 +92,8 @@ typedef enum {
     S_FOREACH,     /* savoforeach @item <collection> ... savoend           */
     S_FUNCDEF,     /* savodef name(params) ... savoend                     */
     S_RETURN,      /* savoreturn [expr]                                    */
+    S_BREAK,       /* savobreak: exit the nearest loop                     */
+    S_CONTINUE,    /* savocontinue: skip to the next loop iteration        */
     S_PUSH,        /* savopush @a <expr>                                   */
     S_SETINDEX,    /* savoset @a[i] = <expr>                               */
     S_DIR,         /* savodir / savols                                     */
