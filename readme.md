@@ -62,10 +62,11 @@ its line number and the interpreter keeps going with the next line.
 | Variables   | `savovar` |
 | Arithmetic  | `savosum`, `savosubtract`, `savomoltiplication`, `savodivide`, `savomod` |
 | Math        | `savosqrt`, `savopow`, `savoabs`, `savofloor`, `savoceil`, `savoround`, `savolog`, `savolog10`, `savomax`, `savomin`, `savorandom` |
-| Strings     | `savolen`, `savoupper`, `savolower`, `savostr`, `savonum` (+ `+` concatenation) |
-| Arrays      | `[ … ]` literals, `@a[i]` indexing, `savopush`, `savoset`, `savolen` |
-| Objects     | `{ k: v }` literals, `@o.field` / `@o["k"]` access, `savoset`, `savolen` |
-| Control     | `savoif`/`savoelif`/`savoelse`/`savoend`, `savowhile`, `savofor` |
+| Strings     | `savolen`, `savoupper`, `savolower`, `savostr`, `savonum`, `savotrim`, `savosubstr`, `savoindexof`, `savoreplace`, `savosplit`, `savojoin` (+ `+` concatenation) |
+| Arrays      | `[ … ]` literals, `@a[i]` indexing, `savopush`, `savopop`, `savoset`, `savolen`, `savocontains` |
+| Objects     | `{ k: v }` literals, `@o.field` / `@o["k"]` access, `savoset`, `savolen`, `savokeys`, `savocontains` |
+| Control     | `savoif`/`savoelif`/`savoelse`/`savoend`, `savowhile`, `savofor`, `savoforeach` |
+| Input       | `savoinput` |
 | Functions   | `savodef`/`savoreturn` |
 | Console     | `savodir`, `savols`, `savocls`, `savoclear`, `savopointercell`, `savohelp`, `savoquit`, `savoexit` |
 

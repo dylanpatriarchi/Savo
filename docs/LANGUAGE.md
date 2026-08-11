@@ -123,6 +123,20 @@ String functions:
 | `savolower(s)` | lowercase copy |
 | `savostr(n)`   | number → string |
 | `savonum(s)`   | string → number |
+| `savotrim(s)`  | copy with leading/trailing whitespace removed |
+| `savosubstr(s, start, len)` | substring of `len` chars from `start` (0-based, clamped) |
+| `savoindexof(s, sub)` | index of the first `sub` in `s`, or `-1` |
+| `savoreplace(s, old, new)` | copy with every `old` replaced by `new` |
+| `savosplit(s, sep)` | array of pieces split on `sep` (empty `sep` → characters) |
+| `savojoin(a, sep)` | join array `a` into a string with `sep` between elements |
+
+```savo
+savoprint savosubstr("hello world", 6, 5) + "\n"   # world
+savoprint savoindexof("banana", "nan")             # 2
+savoprint savoreplace("a-b-c", "-", "/") + "\n"    # a/b/c
+savovar @parts = savosplit("a,b,c", ",")           # ["a", "b", "c"]
+savoprint savojoin(@parts, " | ") + "\n"           # a | b | c
+```
 
 ```savo
 savoprint savoupper("hi " + @name) + "\n"        # HI SAVO
@@ -156,6 +170,15 @@ Mutate arrays with these statements:
 |-----------|--------|
 | `savopush @a <expr>`      | append a value |
 | `savoset @a[i] = <expr>`  | replace the element at index `i` (growing with zeros if needed) |
+
+`savopop(@a)` removes and returns the last element (an expression, so you can use
+the value), and `savocontains(@a, x)` tests membership:
+
+```savo
+savovar @stack = [1, 2, 3]
+savoprint savopop(@stack)          # 3.00  — @stack is now [1, 2]
+savoprint savocontains(@stack, 2)  # 1.00
+```
 
 `savolen(@a)` returns the element count, which makes iteration easy:
 
@@ -200,8 +223,15 @@ savoset @user.city = "London"        # add a new field
 savoprint @user["age"] + "\n"        # 37.00
 ```
 
-`savolen(@o)` returns the number of keys. Like arrays, objects are **shared by
-reference**.
+`savolen(@o)` returns the number of keys, `savokeys(@o)` returns them as an
+array, and `savocontains(@o, "field")` tests whether a key is present. Like
+arrays, objects are **shared by reference**.
+
+```savo
+savovar @user = {name: "Ada", age: 36}
+savoprint savokeys(@user)              # ["age", "name"]
+savoprint savocontains(@user, "age")   # 1.00
+```
 
 Objects and arrays combine into any data structure you need — records, trees,
 graphs. A tree node, for example, is just an object with a `children` array
@@ -232,6 +262,22 @@ savoprint @x                       # a number
 Printing a **number** appends a newline. Printing a **string** writes it
 verbatim, so include `\n` where you want line breaks (in the REPL a newline is
 added for convenience).
+
+## Input
+
+`savoinput()` reads one line from standard input and returns it as a string
+(without the trailing newline). Pass an optional prompt to print first, and wrap
+it in `savonum(...)` when you need a number:
+
+```savo
+savovar @name = savoinput("What is your name? ")
+savovar @age = savonum(savoinput("Age? "))
+savoprint "Hi " + @name + ", next year you are " + (@age + 1) + "\n"
+```
+
+At end of input `savoinput` returns an empty string. When the script itself is
+read from stdin (a pipe or `savo -`), there is no separate input stream to read,
+so `savoinput` is meant for the REPL and for scripts run from a file.
 
 ## Arithmetic
 
@@ -318,6 +364,26 @@ savoprint "5! = " + @f      # 120.00
 
 > A `savowhile` block loops as long as the condition holds — an always-true
 > condition loops forever, exactly like a real `while`.
+
+### Foreach loops
+
+`savoforeach @item <collection> ... savoend` walks a collection: for an array
+`@item` takes each element in turn; for an object it takes each key.
+
+```savo
+savovar @sum = 0
+savoforeach @n [10, 20, 30]
+    savovar @sum = @sum + @n
+savoend
+savoprint "sum = " + @sum + "\n"      # sum = 60.00
+
+savovar @user = {name: "Ada", age: 36}
+savoforeach @k @user
+    savoprint @k + " = " + @user[@k] + "\n"
+savoend
+```
+
+Inside a function, `savoreturn` breaks out of a `savoforeach` immediately.
 
 ### Repeat loops
 
@@ -413,8 +479,18 @@ terminal it runs the interactive REPL with the banner and `>>>` prompt.
 | `savovar` | `<@name> <expr>` (echo) or `<@name> = <expr>` (silent) | Define or update a variable |
 | `savolen` / `savoupper` / `savolower` | `(<expr>)` | String length / upper / lower |
 | `savostr` / `savonum` | `(<expr>)` | Convert number↔string |
+| `savotrim` | `(s)` | Trim surrounding whitespace |
+| `savosubstr` | `(s, start, len)` | Substring |
+| `savoindexof` | `(s, sub)` | First index of `sub`, or `-1` |
+| `savoreplace` | `(s, old, new)` | Replace all occurrences |
+| `savosplit` / `savojoin` | `(s, sep)` / `(a, sep)` | Split a string / join an array |
 | `savopush` | `@a <expr>` | Append to an array |
+| `savopop` | `(@a)` | Remove and return the last element |
+| `savocontains` | `(coll, x)` | Membership in an array/string/object |
+| `savokeys` | `(@o)` | Object keys as an array |
+| `savoinput` | `([prompt])` | Read a line from standard input |
 | `savoset` | `@a[i] = <expr>` / `@o.k = <expr>` | Set an array element or object field |
+| `savoforeach` | `@item <coll> … savoend` | Iterate an array or object |
 | `savosum` | `<value> <value>` | Add |
 | `savosubtract` | `<value> <value>` | Subtract |
 | `savomoltiplication` | `<value> <value>` | Multiply |
