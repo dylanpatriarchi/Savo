@@ -137,6 +137,9 @@ static Expr *parse_primary(Parser *P) {
 
     if (at(P, TK_NUMBER)) { Expr *e = expr_num(P->cur.num); p_advance(P); return e; }
     if (at(P, TK_STRING)) { return expr_str(take_text(P)); }
+    if (at(P, TK_TRUE))   { p_advance(P); return expr_bool(1); }
+    if (at(P, TK_FALSE))  { p_advance(P); return expr_bool(0); }
+    if (at(P, TK_NIL))    { p_advance(P); return expr_nil(); }
 
     /* savoinput([prompt]): the only builtin with an optional argument. */
     if (at(P, TK_INPUT)) {

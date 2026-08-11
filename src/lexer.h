@@ -16,7 +16,7 @@ typedef enum {
     TK_EOF, TK_NEWLINE,
 
     /* literals */
-    TK_NUMBER, TK_STRING, TK_IDENT,
+    TK_NUMBER, TK_STRING, TK_IDENT, TK_TRUE, TK_FALSE, TK_NIL,
 
     /* command / function keywords */
     TK_PRINT, TK_VAR,
