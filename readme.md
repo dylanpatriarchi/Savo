@@ -72,8 +72,9 @@ its line number and the interpreter keeps going with the next line.
 | Functions   | `savodef`/`savoreturn` |
 | Console     | `savodir`, `savols`, `savocls`, `savoclear`, `savopointercell`, `savohelp`, `savoquit`, `savoexit` |
 
-Values are **dynamically typed** — a variable holds a number, a string, an array
-or an object. Anywhere a value is expected you can write a full **expression**:
+Values are **dynamically typed** — a variable holds a number, a boolean, `nil`,
+a string, an array or an object. Anywhere a value is expected you can write a
+full **expression**:
 `+ - * / %`, comparisons, `&& || !`, parentheses, subscripts `@a[i]`, field access
 `@o.field` and nested function calls such as `savosqrt(@x * @x + 9)`. `+` adds
 numbers and **concatenates** when either side is a string. Arrays and objects
