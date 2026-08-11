@@ -70,6 +70,7 @@ void   array_push(Value v, Value elem);       /* appends a copy of elem */
 int    array_length(Value v);
 Value  array_get(Value v, int i);             /* a copy; 0 if out of range */
 void   array_set(Value v, int i, Value elem); /* stores a copy of elem */
+Value  array_pop(Value v);                    /* removes and returns the last element */
 
 /* object operations (the Value must be VAL_OBJ) */
 void   object_set(Value v, const char *key, Value elem); /* stores a copy */

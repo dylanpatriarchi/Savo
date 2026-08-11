@@ -24,6 +24,13 @@ static void *xmalloc(size_t n) {
     return p;
 }
 
+static char *xstrdup(const char *s) {
+    size_t n = strlen(s) + 1;
+    char  *p = xmalloc(n);
+    memcpy(p, s, n);
+    return p;
+}
+
 /* Uniform-ish random integer in [lo, hi], bounds swapped if reversed. Computed
  * in long so a wide int range cannot overflow (hi - lo + 1) as it did before. */
 static double random_in_range(double dlo, double dhi) {
@@ -110,9 +117,9 @@ Expr *expr_bin(BinOp op, Expr *l, Expr *r) {
     return e;
 }
 
-Expr *expr_call(Builtin fn, Expr *a, Expr *b) {
+Expr *expr_call(Builtin fn, Expr *a, Expr *b, Expr *c) {
     Expr *e = new_expr(E_CALL);
-    e->as.call.fn = fn; e->as.call.a = a; e->as.call.b = b;
+    e->as.call.fn = fn; e->as.call.a = a; e->as.call.b = b; e->as.call.c = c;
     return e;
 }
 
@@ -219,7 +226,54 @@ static Value call_user(const Expr *e) {
     return rv;
 }
 
-static Value call_builtin(Builtin fn, Value a, Value b) {
+/* Replace every occurrence of `old` in `s` with `rep`; returns a fresh string.
+ * An empty `old` is returned unchanged to avoid an infinite match. */
+static char *str_replace_all(const char *s, const char *old, const char *rep) {
+    size_t oldlen = strlen(old), replen = strlen(rep);
+    size_t cap, len = 0;
+    char *out;
+    const char *p;
+    if (oldlen == 0) return xstrdup(s);
+    cap = strlen(s) + 1;
+    out = xmalloc(cap);
+    for (p = s; *p; ) {
+        if (strncmp(p, old, oldlen) == 0) {
+            if (len + replen + 1 > cap) { cap = (len + replen + 1) * 2; out = realloc(out, cap); if (!out) { fprintf(stderr, "savo: out of memory\n"); exit(1); } }
+            memcpy(out + len, rep, replen); len += replen; p += oldlen;
+        } else {
+            if (len + 2 > cap) { cap = (len + 2) * 2; out = realloc(out, cap); if (!out) { fprintf(stderr, "savo: out of memory\n"); exit(1); } }
+            out[len++] = *p++;
+        }
+    }
+    out[len] = 0;
+    return out;
+}
+
+/* True if the array holds a value equal to `x` (numbers by value, strings by
+ * content), or the string/object cases handled by the caller. */
+static int array_contains(Value arr, Value x) {
+    Array *a = arr.as.arr;
+    int i;
+    for (i = 0; i < a->count; i++) {
+        Value el = a->items[i];
+        if (el.type == VAL_STR && x.type == VAL_STR) { if (strcmp(el.as.str, x.as.str) == 0) return 1; }
+        else if (el.type == VAL_NUM && x.type == VAL_NUM) { if (el.as.num == x.as.num) return 1; }
+    }
+    return 0;
+}
+
+static Value read_input_line(Value prompt) {
+    char  *line = NULL;
+    size_t cap = 0;
+    ssize_t got;
+    if (prompt.type == VAL_STR && prompt.as.str[0] != '\0') { printf("%s", prompt.as.str); fflush(stdout); }
+    got = getline(&line, &cap, stdin);
+    if (got < 0) { free(line); return value_str_copy(""); }
+    while (got > 0 && (line[got - 1] == '\n' || line[got - 1] == '\r')) line[--got] = 0;
+    return value_str(line);   /* takes ownership of the getline buffer */
+}
+
+static Value call_builtin(Builtin fn, Value a, Value b, Value c) {
     switch (fn) {
         case FN_SQRT:  { double x = value_to_number(a); if (x < 0)  { runtime_error("sqrt of a negative value"); return value_num(0); } return value_num(sqrt(x)); }
         case FN_ABS:   return value_num(fabs(value_to_number(a)));
@@ -238,6 +292,107 @@ static Value call_builtin(Builtin fn, Value a, Value b) {
         case FN_NUM:   return value_num(value_to_number(a));
         case FN_UPPER: { char *s = value_to_string(a), *p; for (p = s; *p; p++) *p = (char) toupper((unsigned char) *p); return value_str(s); }
         case FN_LOWER: { char *s = value_to_string(a), *p; for (p = s; *p; p++) *p = (char) tolower((unsigned char) *p); return value_str(s); }
+        case FN_TRIM: {
+            char *s = value_to_string(a), *start = s, *end, *out;
+            size_t n;
+            while (*start && isspace((unsigned char) *start)) start++;
+            end = start + strlen(start);
+            while (end > start && isspace((unsigned char) end[-1])) end--;
+            n = (size_t) (end - start);
+            out = xmalloc(n + 1); memcpy(out, start, n); out[n] = 0;
+            free(s);
+            return value_str(out);
+        }
+        case FN_SUBSTR: {
+            char *s = value_to_string(a), *out;
+            int slen = (int) strlen(s);
+            int start = (int) value_to_number(b);
+            int len = (int) value_to_number(c);
+            if (start < 0) start = 0;
+            if (start > slen) start = slen;
+            if (len < 0) len = 0;
+            if (start + len > slen) len = slen - start;
+            out = xmalloc((size_t) len + 1); memcpy(out, s + start, (size_t) len); out[len] = 0;
+            free(s);
+            return value_str(out);
+        }
+        case FN_INDEXOF: {
+            char *s = value_to_string(a), *sub = value_to_string(b), *hit = strstr(s, sub);
+            double idx = hit ? (double) (hit - s) : -1.0;
+            free(s); free(sub);
+            return value_num(idx);
+        }
+        case FN_REPLACE: {
+            char *s = value_to_string(a), *o = value_to_string(b), *r = value_to_string(c);
+            char *out = str_replace_all(s, o, r);
+            free(s); free(o); free(r);
+            return value_str(out);
+        }
+        case FN_SPLIT: {
+            char *s = value_to_string(a), *sep = value_to_string(b);
+            Value arr = value_array();
+            size_t seplen = strlen(sep);
+            if (seplen == 0) {
+                char *p, ch[2]; ch[1] = 0;
+                for (p = s; *p; p++) { Value v; ch[0] = *p; v = value_str_copy(ch); array_push(arr, v); value_free(v); }
+            } else {
+                char *seg = s, *hit;
+                while ((hit = strstr(seg, sep)) != NULL) {
+                    size_t n = (size_t) (hit - seg);
+                    char *piece = xmalloc(n + 1); Value v;
+                    memcpy(piece, seg, n); piece[n] = 0;
+                    v = value_str(piece); array_push(arr, v); value_free(v);
+                    seg = hit + seplen;
+                }
+                { Value v = value_str_copy(seg); array_push(arr, v); value_free(v); }
+            }
+            free(s); free(sep);
+            return arr;
+        }
+        case FN_JOIN: {
+            char *sep, *out;
+            size_t len = 0, seplen;
+            int i;
+            Array *ar;
+            if (a.type != VAL_ARR) { runtime_error("savojoin expects an array"); return value_str_copy(""); }
+            sep = value_to_string(b); seplen = strlen(sep);
+            out = xstrdup(""); ar = a.as.arr;
+            for (i = 0; i < ar->count; i++) {
+                char  *piece = value_to_string(ar->items[i]);
+                size_t plen = strlen(piece);
+                out = realloc(out, len + (i ? seplen : 0) + plen + 1);
+                if (out == NULL) { fprintf(stderr, "savo: out of memory\n"); exit(1); }
+                if (i) { memcpy(out + len, sep, seplen); len += seplen; }
+                memcpy(out + len, piece, plen); len += plen; out[len] = 0;
+                free(piece);
+            }
+            free(sep);
+            return value_str(out);
+        }
+        case FN_POP:
+            if (a.type != VAL_ARR) { runtime_error("savopop expects an array"); return value_num(0); }
+            return array_pop(a);
+        case FN_CONTAINS:
+            if (a.type == VAL_ARR) return value_num(array_contains(a, b));
+            if (a.type == VAL_OBJ) {
+                char *k = value_to_string(b); MapEntry *e; int found = 0;
+                for (e = a.as.obj->head; e; e = e->next) if (strcmp(e->key, k) == 0) { found = 1; break; }
+                free(k);
+                return value_num(found);
+            }
+            { char *s = value_to_string(a), *sub = value_to_string(b); int f = strstr(s, sub) != NULL; free(s); free(sub); return value_num(f); }
+        case FN_KEYS: {
+            Value arr = value_array();
+            if (a.type == VAL_OBJ) {
+                MapEntry *e;
+                for (e = a.as.obj->head; e; e = e->next) { Value v = value_str_copy(e->key); array_push(arr, v); value_free(v); }
+            } else {
+                runtime_error("savokeys expects an object");
+            }
+            return arr;
+        }
+        case FN_INPUT:
+            return read_input_line(a);
     }
     return value_num(0);
 }
@@ -320,8 +475,9 @@ Value eval_expr(const Expr *e) {
         case E_CALL: {
             Value a = eval_expr(e->as.call.a);
             Value b = e->as.call.b ? eval_expr(e->as.call.b) : value_num(0);
-            Value res = call_builtin(e->as.call.fn, a, b);
-            value_free(a); value_free(b);
+            Value c = e->as.call.c ? eval_expr(e->as.call.c) : value_num(0);
+            Value res = call_builtin(e->as.call.fn, a, b, c);
+            value_free(a); value_free(b); value_free(c);
             return res;
         }
         case E_CALLUSER: return call_user(e);
@@ -376,7 +532,7 @@ void free_expr(Expr *e) {
         case E_NEG:
         case E_NOT:    free_expr(e->as.unary); break;
         case E_BIN:    free_expr(e->as.bin.l); free_expr(e->as.bin.r); break;
-        case E_CALL:   free_expr(e->as.call.a); free_expr(e->as.call.b); break;
+        case E_CALL:   free_expr(e->as.call.a); free_expr(e->as.call.b); free_expr(e->as.call.c); break;
         case E_CALLUSER: {
             int i;
             for (i = 0; i < e->as.ucall.argc; i++) free_expr(e->as.ucall.argv[i]);

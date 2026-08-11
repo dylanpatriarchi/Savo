@@ -144,6 +144,17 @@ void array_set(Value v, int i, Value elem) {
     a->items[i] = value_copy(elem);
 }
 
+/* Remove the last element and return it, transferring ownership to the caller
+ * (the array no longer references it). Shared arrays see the shortened length. */
+Value array_pop(Value v) {
+    Array *a = v.as.arr;
+    if (a->count == 0) {
+        fprintf(stderr, "savo: pop from an empty array (using 0)\n");
+        return value_num(0);
+    }
+    return a->items[--a->count];
+}
+
 double value_to_number(Value v) {
     if (v.type == VAL_NUM) return v.as.num;
     if (v.type == VAL_ARR) return v.as.arr->count;   /* arrays coerce to length */

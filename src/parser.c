@@ -51,25 +51,34 @@ static Expr *parse_expr(Parser *P);
 static Expr *parse_atom(Parser *P);
 
 /* Map a builtin-function keyword token to its (fn, arity). Returns 1 if the
- * current token is such a function, filling *fn and *binary. */
-static int builtin_of(TokKind k, Builtin *fn, int *binary) {
+ * current token is such a function, filling *fn and *arity (1, 2 or 3). */
+static int builtin_of(TokKind k, Builtin *fn, int *arity) {
     switch (k) {
-        case TK_SQRT:  *fn = FN_SQRT;  *binary = 0; return 1;
-        case TK_ABS:   *fn = FN_ABS;   *binary = 0; return 1;
-        case TK_FLOOR: *fn = FN_FLOOR; *binary = 0; return 1;
-        case TK_CEIL:  *fn = FN_CEIL;  *binary = 0; return 1;
-        case TK_ROUND: *fn = FN_ROUND; *binary = 0; return 1;
-        case TK_LOG:   *fn = FN_LOG;   *binary = 0; return 1;
-        case TK_LOG10: *fn = FN_LOG10; *binary = 0; return 1;
-        case TK_LEN:   *fn = FN_LEN;   *binary = 0; return 1;
-        case TK_UPPER: *fn = FN_UPPER; *binary = 0; return 1;
-        case TK_LOWER: *fn = FN_LOWER; *binary = 0; return 1;
-        case TK_TOSTR: *fn = FN_STR;   *binary = 0; return 1;
-        case TK_TONUM: *fn = FN_NUM;   *binary = 0; return 1;
-        case TK_POW:   *fn = FN_POW;   *binary = 1; return 1;
-        case TK_MAX:   *fn = FN_MAX;   *binary = 1; return 1;
-        case TK_MIN:   *fn = FN_MIN;   *binary = 1; return 1;
-        case TK_RANDOM:*fn = FN_RANDOM;*binary = 1; return 1;
+        case TK_SQRT:    *fn = FN_SQRT;    *arity = 1; return 1;
+        case TK_ABS:     *fn = FN_ABS;     *arity = 1; return 1;
+        case TK_FLOOR:   *fn = FN_FLOOR;   *arity = 1; return 1;
+        case TK_CEIL:    *fn = FN_CEIL;    *arity = 1; return 1;
+        case TK_ROUND:   *fn = FN_ROUND;   *arity = 1; return 1;
+        case TK_LOG:     *fn = FN_LOG;     *arity = 1; return 1;
+        case TK_LOG10:   *fn = FN_LOG10;   *arity = 1; return 1;
+        case TK_LEN:     *fn = FN_LEN;     *arity = 1; return 1;
+        case TK_UPPER:   *fn = FN_UPPER;   *arity = 1; return 1;
+        case TK_LOWER:   *fn = FN_LOWER;   *arity = 1; return 1;
+        case TK_TOSTR:   *fn = FN_STR;     *arity = 1; return 1;
+        case TK_TONUM:   *fn = FN_NUM;     *arity = 1; return 1;
+        case TK_TRIM:    *fn = FN_TRIM;    *arity = 1; return 1;
+        case TK_POP:     *fn = FN_POP;     *arity = 1; return 1;
+        case TK_KEYS:    *fn = FN_KEYS;    *arity = 1; return 1;
+        case TK_POW:     *fn = FN_POW;     *arity = 2; return 1;
+        case TK_MAX:     *fn = FN_MAX;     *arity = 2; return 1;
+        case TK_MIN:     *fn = FN_MIN;     *arity = 2; return 1;
+        case TK_RANDOM:  *fn = FN_RANDOM;  *arity = 2; return 1;
+        case TK_INDEXOF: *fn = FN_INDEXOF; *arity = 2; return 1;
+        case TK_SPLIT:   *fn = FN_SPLIT;   *arity = 2; return 1;
+        case TK_JOIN:    *fn = FN_JOIN;    *arity = 2; return 1;
+        case TK_CONTAINS:*fn = FN_CONTAINS;*arity = 2; return 1;
+        case TK_SUBSTR:  *fn = FN_SUBSTR;  *arity = 3; return 1;
+        case TK_REPLACE: *fn = FN_REPLACE; *arity = 3; return 1;
         default: return 0;
     }
 }
@@ -124,19 +133,30 @@ static Expr *parse_postfix(Parser *P, Expr *base) {
 
 static Expr *parse_primary(Parser *P) {
     Builtin fn;
-    int binary;
+    int arity;
 
     if (at(P, TK_NUMBER)) { Expr *e = expr_num(P->cur.num); p_advance(P); return e; }
     if (at(P, TK_STRING)) { return expr_str(take_text(P)); }
 
-    if (builtin_of(P->cur.kind, &fn, &binary)) {
-        Expr *a, *b = NULL;
+    /* savoinput([prompt]): the only builtin with an optional argument. */
+    if (at(P, TK_INPUT)) {
+        Expr *prompt;
+        p_advance(P);
+        expect(P, TK_LPAREN, "'('");
+        prompt = at(P, TK_RPAREN) ? expr_str(strdup("")) : parse_expr(P);
+        expect(P, TK_RPAREN, "')'");
+        return expr_call(FN_INPUT, prompt, NULL, NULL);
+    }
+
+    if (builtin_of(P->cur.kind, &fn, &arity)) {
+        Expr *a, *b = NULL, *c = NULL;
         p_advance(P);
         expect(P, TK_LPAREN, "'('");
         a = parse_expr(P);
-        if (binary) { expect(P, TK_COMMA, "','"); b = parse_expr(P); }
+        if (arity >= 2) { expect(P, TK_COMMA, "','"); b = parse_expr(P); }
+        if (arity >= 3) { expect(P, TK_COMMA, "','"); c = parse_expr(P); }
         expect(P, TK_RPAREN, "')'");
-        return expr_call(fn, a, b);
+        return expr_call(fn, a, b, c);
     }
 
     if (at(P, TK_IDENT)) {
