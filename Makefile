@@ -42,5 +42,5 @@ asan: clean $(BIN)
 	@sh tests/run.sh
 
 clean:
-	rm -rf build
+	rm -rf build $(BIN).dSYM
 	rm -f $(BIN) savo.exe

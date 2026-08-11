@@ -1,6 +1,7 @@
 # Build output
 /savo
 /savo.exe
+*.dSYM/
 
 # Editor / OS noise
 .DS_Store
