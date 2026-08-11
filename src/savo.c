@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "savo.h"
@@ -27,6 +28,7 @@ int savo_run_string(const char *code) {
     parser_run(&lx);
     lexer_free(&lx);
 
+    fflush(stdout);   /* surface any output with no trailing newline (e.g. WASM) */
     return had_error;
 }
 

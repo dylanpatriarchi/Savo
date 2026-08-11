@@ -2,6 +2,9 @@
 
 [![CI](https://github.com/dylanpatriarchi/Savo/actions/workflows/ci.yml/badge.svg)](https://github.com/dylanpatriarchi/Savo/actions/workflows/ci.yml)
 
+**▶ [Try Savo in your browser](https://dylanpatriarchi.github.io/Savo/)** — the
+interpreter compiled to WebAssembly, running entirely client-side.
+
 Savo is a tiny scripting language with a console REPL, implemented in C with a
 **hand-written lexer and recursive-descent parser** (no external toolchain).
 Every command is a keyword prefixed with `savo` — `savoprint`, `savosum`,
@@ -142,6 +145,19 @@ make embed && ./embed
 Variables and functions persist across `savo_run_string` calls until
 `savo_reset()`, and in embedded use `savoquit` stops the current run instead of
 terminating the host process. See [`examples/embed.c`](examples/embed.c).
+
+## Playground (WebAssembly)
+
+The same embeddable core compiles to WebAssembly for the in-browser
+[playground](https://dylanpatriarchi.github.io/Savo/). With
+[Emscripten](https://emscripten.org) installed:
+
+```sh
+make wasm      # builds web/savo.js + web/savo.wasm
+```
+
+The page in [`web/`](web) loads the module and runs programs client-side; CI
+builds and deploys it to GitHub Pages on every push to `main`.
 
 ## Contributing
 

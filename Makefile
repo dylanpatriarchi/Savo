@@ -25,7 +25,7 @@ CORE_OBJS := $(addprefix $(BUILD)/,$(addsuffix .o,$(CORE)))
 MAIN_OBJ := $(BUILD)/main.o
 HEADERS  := $(wildcard $(SRC)/*.h)
 
-.PHONY: all run example test asan lib embed fuzz clean
+.PHONY: all run example test asan lib embed fuzz wasm clean
 
 all: $(BIN)
 
@@ -50,6 +50,16 @@ embed: $(LIB)
 FUZZ_SRCS := fuzz/fuzz_savo.c $(addprefix $(SRC)/,lexer.c parser.c global.c value.c symtab.c ast.c savo.c lineedit.c)
 fuzz:
 	clang -g -O1 -fsanitize=fuzzer,address,undefined -Isrc $(FUZZ_SRCS) $(LDLIBS) -o fuzz_savo
+
+# Build the WebAssembly interpreter for the browser playground (needs Emscripten).
+# Produces web/savo.js + web/savo.wasm exporting the embeddable API.
+WASM_SRCS := $(addprefix $(SRC)/,lexer.c parser.c global.c value.c symtab.c ast.c savo.c lineedit.c)
+wasm:
+	emcc -O2 -Isrc $(WASM_SRCS) -o web/savo.js \
+	  -sEXPORTED_FUNCTIONS=_savo_run_string,_savo_reset,_malloc,_free \
+	  -sEXPORTED_RUNTIME_METHODS=ccall,cwrap,FS \
+	  -sMODULARIZE=1 -sEXPORT_NAME=SavoModule \
+	  -sALLOW_MEMORY_GROWTH=1
 
 run: $(BIN)
 	./$(BIN)

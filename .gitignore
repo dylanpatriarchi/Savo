@@ -13,3 +13,5 @@ oom-*
 # Editor / OS noise
 .DS_Store
 *.o
+/web/savo.js
+/web/savo.wasm
