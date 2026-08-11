@@ -24,6 +24,16 @@ static void *xmalloc(size_t n) {
     return p;
 }
 
+/* Uniform-ish random integer in [lo, hi], bounds swapped if reversed. Computed
+ * in long so a wide int range cannot overflow (hi - lo + 1) as it did before. */
+static double random_in_range(double dlo, double dhi) {
+    long lo = (long) dlo, hi = (long) dhi, t;
+    unsigned long span;
+    if (hi < lo) { t = lo; lo = hi; hi = t; }
+    span = (unsigned long) (hi - lo) + 1UL;
+    return (double) (lo + (long) ((unsigned long) rand() % span));
+}
+
 /* Return handling: set by S_RETURN, checked by block/loop execution. */
 static int   g_returning = 0;
 static Value g_return_value = { VAL_NUM, { 0 } };
@@ -212,11 +222,8 @@ static Value call_builtin(Builtin fn, Value a, Value b) {
         case FN_POW:   return value_num(pow(value_to_number(a), value_to_number(b)));
         case FN_MAX:   { double x = value_to_number(a), y = value_to_number(b); return value_num(x > y ? x : y); }
         case FN_MIN:   { double x = value_to_number(a), y = value_to_number(b); return value_num(x < y ? x : y); }
-        case FN_RANDOM: {
-            int lo = (int) value_to_number(a), hi = (int) value_to_number(b), t;
-            if (hi < lo) { t = lo; lo = hi; hi = t; }
-            return value_num(lo + rand() % (hi - lo + 1));
-        }
+        case FN_RANDOM:
+            return value_num(random_in_range(value_to_number(a), value_to_number(b)));
         case FN_LEN:   { if (a.type == VAL_ARR) return value_num(array_length(a)); if (a.type == VAL_OBJ) return value_num(object_length(a)); { char *s = value_to_string(a); double n = (double) strlen(s); free(s); return value_num(n); } }
         case FN_STR:   return value_str(value_to_string(a));
         case FN_NUM:   return value_num(value_to_number(a));
@@ -578,12 +585,9 @@ void exec_stmt(const Stmt *s) {
             }
             break;
         }
-        case S_RANDOM: {
-            int lo = (int) eval_num(s->a), hi = (int) eval_num(s->b), t;
-            if (hi < lo) { t = lo; lo = hi; hi = t; }
-            printf("%d\n", lo + rand() % (hi - lo + 1));
+        case S_RANDOM:
+            printf("%d\n", (int) random_in_range(eval_num(s->a), eval_num(s->b)));
             break;
-        }
         case S_REPEAT: {
             int i, n = (int) eval_num(s->a);
             for (i = 0; i < n; i++) printf("%s\n", s->str);
