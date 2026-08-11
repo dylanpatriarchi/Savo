@@ -67,7 +67,7 @@ its line number and the interpreter keeps going with the next line.
 | Strings     | `savolen`, `savoupper`, `savolower`, `savostr`, `savonum`, `savotrim`, `savosubstr`, `savoindexof`, `savoreplace`, `savosplit`, `savojoin` (+ `+` concatenation) |
 | Arrays      | `[ … ]` literals, `@a[i]` indexing, `savopush`, `savopop`, `savoset`, `savolen`, `savocontains` |
 | Objects     | `{ k: v }` literals, `@o.field` / `@o["k"]` access, `savoset`, `savolen`, `savokeys`, `savocontains` |
-| Control     | `savoif`/`savoelif`/`savoelse`/`savoend`, `savowhile`, `savofor`, `savoforeach` |
+| Control     | `savoif`/`savoelif`/`savoelse`/`savoend`, `savowhile`, `savofor`, `savoforeach`, `savobreak`, `savocontinue` |
 | Input       | `savoinput` |
 | Functions   | `savodef`/`savoreturn` |
 | Console     | `savodir`, `savols`, `savocls`, `savoclear`, `savopointercell`, `savohelp`, `savoquit`, `savoexit` |

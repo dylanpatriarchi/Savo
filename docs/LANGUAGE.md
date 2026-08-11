@@ -385,6 +385,24 @@ savoend
 
 Inside a function, `savoreturn` breaks out of a `savoforeach` immediately.
 
+### Breaking out and skipping
+
+Inside any loop, `savobreak` exits the loop immediately and `savocontinue` skips
+to the next iteration. They act on the nearest enclosing loop and never cross a
+function boundary.
+
+```savo
+savoforeach @n [1, 2, 3, 4, 5]
+    savoif (@n == 2)
+        savocontinue          # skip 2
+    savoend
+    savoif (@n == 4)
+        savobreak             # stop before 4
+    savoend
+    savoprint @n              # prints 1, then 3
+savoend
+```
+
 ### Repeat loops
 
 For simply repeating a string a fixed number of times:
@@ -509,6 +527,7 @@ terminal it runs the interactive REPL with the banner and `>>>` prompt.
 | `savorandom` | `<min> <max>` | Random integer in range |
 | `savoif` | `(<cond>) … [savoelif …] [savoelse …] savoend` | Conditional block |
 | `savowhile` | `(<cond>) … savoend` | While loop |
+| `savobreak` / `savocontinue` | — | Exit / skip the current loop iteration |
 | `savodef` | `name(<@params>) … savoend` | Define a function |
 | `savoreturn` | `[<expr>]` | Return a value from a function |
 | `savofor` | `<count> <"str">` or `(a,b,s) <"str">` | Repeat / counted loop |
