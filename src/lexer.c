@@ -25,6 +25,8 @@ static const struct { const char *word; TokKind kind; } KEYWORDS[] = {
     { "savosplit", TK_SPLIT },   { "savojoin", TK_JOIN },
     { "savopop", TK_POP },       { "savocontains", TK_CONTAINS },
     { "savokeys", TK_KEYS },     { "savoinput", TK_INPUT },
+    { "savomap", TK_MAP },       { "savofilter", TK_FILTER },
+    { "savoreduce", TK_REDUCE }, { "savosort", TK_SORT },
     { "savoforeach", TK_FOREACH },
     { "savotrue", TK_TRUE },     { "savofalse", TK_FALSE },
     { "savonil", TK_NIL },

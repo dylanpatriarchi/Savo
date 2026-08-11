@@ -77,8 +77,11 @@ static int builtin_of(TokKind k, Builtin *fn, int *arity) {
         case TK_SPLIT:   *fn = FN_SPLIT;   *arity = 2; return 1;
         case TK_JOIN:    *fn = FN_JOIN;    *arity = 2; return 1;
         case TK_CONTAINS:*fn = FN_CONTAINS;*arity = 2; return 1;
+        case TK_MAP:     *fn = FN_MAP;     *arity = 2; return 1;
+        case TK_FILTER:  *fn = FN_FILTER;  *arity = 2; return 1;
         case TK_SUBSTR:  *fn = FN_SUBSTR;  *arity = 3; return 1;
         case TK_REPLACE: *fn = FN_REPLACE; *arity = 3; return 1;
+        case TK_REDUCE:  *fn = FN_REDUCE;  *arity = 3; return 1;
         default: return 0;
     }
 }
@@ -151,6 +154,17 @@ static Expr *parse_primary(Parser *P) {
         return expr_call(FN_INPUT, prompt, NULL, NULL);
     }
 
+    /* savosort(arr [, comparator]): the comparator is optional. */
+    if (at(P, TK_SORT)) {
+        Expr *arr, *cmp = NULL;
+        p_advance(P);
+        expect(P, TK_LPAREN, "'('");
+        arr = parse_expr(P);
+        if (at(P, TK_COMMA)) { p_advance(P); cmp = parse_expr(P); }
+        expect(P, TK_RPAREN, "')'");
+        return expr_call(FN_SORT, arr, cmp, NULL);
+    }
+
     if (builtin_of(P->cur.kind, &fn, &arity)) {
         Expr *a, *b = NULL, *c = NULL;
         p_advance(P);
@@ -163,15 +177,15 @@ static Expr *parse_primary(Parser *P) {
     }
 
     if (at(P, TK_IDENT)) {
-        char *name = take_text(P);
-        if (at(P, TK_LPAREN)) {          /* user function call */
+        Expr *var = expr_var(take_text(P));
+        if (at(P, TK_LPAREN)) {          /* call: the name yields the function */
             Arg *args;
             p_advance(P);
             args = parse_args(P, TK_RPAREN);
             expect(P, TK_RPAREN, "')'");
-            return expr_calluser(name, args);
+            return expr_calluser(var, args);
         }
-        return expr_var(name);
+        return var;
     }
 
     if (at(P, TK_LPAREN)) {
