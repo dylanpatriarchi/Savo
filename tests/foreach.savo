@@ -1,0 +1,29 @@
+# savoforeach over arrays and objects.
+savovar @nums = [10, 20, 30, 40]
+savovar @sum = 0
+savoforeach @n @nums
+    savovar @sum = @sum + @n
+savoend
+savoprint "sum = " + @sum + "\n"
+
+savoforeach @x [1, 2, 3]
+    savoprint @x
+savoend
+
+savovar @o = {a: 1, b: 2, c: 3}
+savovar @keys = ""
+savoforeach @k @o
+    savovar @keys = @keys + @k
+savoend
+savoprint "keys = " + @keys + "\n"
+
+# savoreturn breaks out of a foreach inside a function
+savodef firstOver(@arr, @limit)
+    savoforeach @v @arr
+        savoif (@v > @limit)
+            savoreturn @v
+        savoend
+    savoend
+    savoreturn 0-1
+savoend
+savoprint "first over 25 = " + firstOver(@nums, 25) + "\n"
