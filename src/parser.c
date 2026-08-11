@@ -355,31 +355,17 @@ static Stmt *parse_foreach(Parser *P) {
 }
 
 static Stmt *parse_set(Parser *P) {
-    char *name;
+    Expr *target;
     p_advance(P);                        /* SET */
     if (!at(P, TK_IDENT)) perror_at(P, "expected a variable name after savoset");
-    name = take_text(P);
-    if (at(P, TK_LBRACKET)) {
-        Expr *idx, *val;
-        p_advance(P);
-        idx = parse_expr(P);
-        expect(P, TK_RBRACKET, "']'");
-        expect(P, TK_ASSIGN, "'='");
-        val = parse_expr(P);
-        return stmt_setindex(name, idx, val);
-    }
-    if (at(P, TK_DOT)) {
-        char *key;
-        Expr *val;
-        p_advance(P);
-        if (!at(P, TK_IDENT)) perror_at(P, "expected a field name after '.'");
-        key = take_text(P);
-        expect(P, TK_ASSIGN, "'='");
-        val = parse_expr(P);
-        return stmt_setindex(name, expr_str(key), val);
-    }
-    perror_at(P, "expected '[' or '.' after savoset");
-    return NULL;
+    target = expr_var(take_text(P));
+    if (!at(P, TK_LBRACKET) && !at(P, TK_DOT))
+        perror_at(P, "savoset needs an index [..] or field .name");
+    /* parse_postfix builds the full [..]/.name chain, so nested targets like
+     * @a.b[i] or @o.a.b assign at any depth. */
+    target = parse_postfix(P, target);
+    expect(P, TK_ASSIGN, "'='");
+    return stmt_setindex(target, parse_expr(P));
 }
 
 static Stmt *parse_funcdef(Parser *P) {
