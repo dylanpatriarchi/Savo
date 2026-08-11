@@ -1,9 +1,9 @@
 # Savo
 
-Savo is a tiny scripting language with a console REPL, implemented in C with
-**Flex** (lexer) and **Bison** (parser). Every command is a keyword prefixed
-with `savo` — `savoprint`, `savosum`, `savoif`, and so on — which makes short
-scripts read almost like plain english.
+Savo is a tiny scripting language with a console REPL, implemented in C with a
+**hand-written lexer and recursive-descent parser** (no external toolchain).
+Every command is a keyword prefixed with `savo` — `savoprint`, `savosum`,
+`savoif`, and so on — which makes short scripts read almost like plain english.
 
 ```savo
 savovar @answer = 6 * 7
@@ -20,19 +20,19 @@ correct!
 
 ## Build
 
-You need `flex`, `bison`, a C compiler and `make` (all standard on macOS and
-Linux).
+You only need a C compiler and `make` (standard on macOS and Linux) — there is
+no flex/bison dependency.
 
 ```sh
 make            # build the ./savo interpreter
 make run        # build, then start the interactive REPL
 make example    # build, then run examples/demo.savo
 make test       # build, then run the golden-file test suite
+make asan       # build with AddressSanitizer + UBSan, then run the tests
 make clean      # remove build artifacts
 ```
 
-Generated sources and the binary land in `build/` and `./savo` and are ignored
-by git.
+The `./savo` binary is ignored by git.
 
 ## Usage
 
@@ -102,10 +102,11 @@ savoprint "5! = " + fact(5)   # 120.00
 
 ```
 src/               language sources
-├── lexer.l        Flex lexer (tokens, escapes, CLI entry point)
-├── parser.y       Bison grammar that builds the AST
+├── lexer.c/.h     hand-written lexer (tokens, escapes, streaming input)
+├── parser.c/.h    recursive-descent parser that builds the AST
+├── main.c         CLI entry point (argument handling, REPL/script setup)
 ├── ast.c/.h       AST nodes + tree-walking interpreter
-├── value.c/.h     dynamic value type (number / string)
+├── value.c/.h     dynamic value type (number / string / array / object)
 ├── symtab.c/.h    scoped variable storage
 └── global.c/.h    shared runtime state
 examples/          runnable .savo scripts
