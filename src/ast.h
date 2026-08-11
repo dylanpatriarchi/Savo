@@ -25,7 +25,10 @@ typedef enum {
 typedef enum {
     FN_SQRT, FN_ABS, FN_FLOOR, FN_CEIL, FN_ROUND, FN_LOG, FN_LOG10, /* num, unary  */
     FN_POW, FN_MAX, FN_MIN, FN_RANDOM,                              /* num, binary */
-    FN_LEN, FN_UPPER, FN_LOWER, FN_STR, FN_NUM                      /* string ops  */
+    FN_LEN, FN_UPPER, FN_LOWER, FN_STR, FN_NUM,                     /* string ops  */
+    FN_TRIM, FN_SUBSTR, FN_INDEXOF, FN_REPLACE, FN_SPLIT, FN_JOIN,  /* more strings */
+    FN_POP, FN_CONTAINS, FN_KEYS,                                   /* collections */
+    FN_INPUT                                                        /* read a line */
 } Builtin;
 
 typedef enum {
@@ -41,7 +44,7 @@ typedef struct Expr {
         char  *var;                                   /* E_VAR  */
         struct { BinOp op; struct Expr *l, *r; } bin; /* E_BIN  */
         struct Expr *unary;                           /* E_NEG / E_NOT */
-        struct { Builtin fn; struct Expr *a, *b; } call; /* E_CALL (b may be NULL) */
+        struct { Builtin fn; struct Expr *a, *b, *c; } call; /* E_CALL (b, c may be NULL) */
         struct { char *name; struct Expr **argv; int argc; } ucall; /* E_CALLUSER */
         struct { struct Expr **items; int count; } list; /* E_ARRAY */
         struct { struct Expr *base, *idx; } index;    /* E_INDEX (array/string/object) */
@@ -63,7 +66,7 @@ Expr *expr_var(char *name);            /* takes ownership of name */
 Expr *expr_bin(BinOp op, Expr *l, Expr *r);
 Expr *expr_neg(Expr *e);
 Expr *expr_not(Expr *e);
-Expr *expr_call(Builtin fn, Expr *a, Expr *b);
+Expr *expr_call(Builtin fn, Expr *a, Expr *b, Expr *c);  /* b, c nullable */
 Expr *expr_calluser(char *name, Arg *args);    /* user function call */
 Expr *expr_array(Arg *items);                  /* array literal [ ... ] */
 Expr *expr_index(Expr *base, Expr *idx);       /* subscript base[idx] / base.key */
@@ -86,6 +89,7 @@ typedef enum {
     S_BLOCK,       /* a sequence of statements (body of if/while)          */
     S_IF,          /* savoif (cond) ... [savoelse ...] savoend             */
     S_WHILE,       /* savowhile (cond) ... savoend                         */
+    S_FOREACH,     /* savoforeach @item <collection> ... savoend           */
     S_FUNCDEF,     /* savodef name(params) ... savoend                     */
     S_RETURN,      /* savoreturn [expr]                                    */
     S_PUSH,        /* savopush @a <expr>                                   */
@@ -123,6 +127,7 @@ Stmt *stmt_block_new(void);
 void  stmt_block_add(Stmt *block, Stmt *s);   /* appends s to block */
 Stmt *stmt_if(Expr *cond, Stmt *thenb, Stmt *elseb /*nullable*/);
 Stmt *stmt_while(Expr *cond, Stmt *body);
+Stmt *stmt_foreach(char *var, Expr *coll, Stmt *body);  /* savoforeach @v <coll> */
 Stmt *stmt_funcdef(char *name, Param *params, Stmt *body);
 Stmt *stmt_return(Expr *e /*nullable*/);
 Stmt *stmt_push(char *name, Expr *e);           /* savopush @a <expr> */

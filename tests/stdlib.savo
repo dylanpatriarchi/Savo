@@ -1,0 +1,26 @@
+# String and collection builtins.
+savoprint savotrim("  padded  ") + "|\n"
+savoprint savosubstr("hello world", 0, 5) + "\n"
+savoprint savosubstr("hello world", 6, 99) + "\n"
+savoprint savoindexof("banana", "nan")
+savoprint savoindexof("banana", "xyz")
+savoprint savoreplace("one two two", "two", "2") + "\n"
+
+savovar @csv = savosplit("a,b,c,d", ",")
+savoprint @csv
+savoprint savolen(@csv)
+savoprint savojoin(@csv, "-") + "\n"
+savoprint savojoin(savosplit("path/to/file", "/"), ".") + "\n"
+
+savovar @stack = [1, 2, 3]
+savoprint savopop(@stack)
+savoprint @stack
+savoprint savolen(@stack)
+
+savoprint savocontains([5, 10, 15], 10)
+savoprint savocontains([5, 10, 15], 7)
+savoprint savocontains("hello world", "world")
+savovar @rec = {id: 1, name: "x"}
+savoprint savocontains(@rec, "name")
+savoprint savocontains(@rec, "missing")
+savoprint savokeys(@rec)
