@@ -1008,7 +1008,9 @@ void exec_stmt(const Stmt *s) {
             print_help();
             break;
         case S_QUIT:
-            exit(had_error);
+            if (savo_exit_on_quit) exit(had_error);
+            savo_quit_flag = 1;   /* embedded: stop this run without exiting */
+            break;
         case S_POINTER:
             printf("%s: %p\n", s->str, (void *) s->str);
             break;

@@ -4,8 +4,7 @@
 #include <setjmp.h>
 #include "parser.h"
 #include "ast.h"
-
-extern int had_error;   /* defined in main.c */
+#include "global.h"
 
 typedef struct {
     Lexer  *lx;
@@ -512,7 +511,7 @@ void parser_run(Lexer *lx) {
         if (setjmp(P.recover)) {
             while (!at(&P, TK_NEWLINE) && !at(&P, TK_EOF)) p_advance(&P);
         }
-        if (at(&P, TK_EOF)) break;
+        if (at(&P, TK_EOF) || savo_quit_flag) break;
         if (at(&P, TK_NEWLINE)) { p_advance(&P); continue; }
 
         {
