@@ -45,6 +45,10 @@ static double random_in_range(double dlo, double dhi) {
 static int   g_returning = 0;
 static Value g_return_value = { VAL_NUM, { 0 } };
 
+/* Loop control: set by savobreak/savocontinue, consumed by the nearest loop. */
+enum { LOOP_NONE, LOOP_BREAK, LOOP_CONTINUE };
+static int g_loop_signal = LOOP_NONE;
+
 /* Registered user functions (each points at a retained S_FUNCDEF node). */
 static Stmt *g_functions = NULL;
 
@@ -189,7 +193,7 @@ static int g_call_depth = 0;
 
 static Value call_user(const Expr *e) {
     Stmt *fn = func_lookup(e->as.ucall.name);
-    int i, saved_r;
+    int i, saved_r, saved_sig;
     Value saved_v, rv, *values;
 
     if (fn == NULL) { runtime_error("call to undefined function"); return value_num(0); }
@@ -215,12 +219,14 @@ static Value call_user(const Expr *e) {
     free(values);
 
     saved_r = g_returning; saved_v = g_return_value;
-    g_returning = 0; g_return_value = value_num(0);
+    saved_sig = g_loop_signal;
+    g_returning = 0; g_return_value = value_num(0); g_loop_signal = LOOP_NONE;
     g_call_depth++;
     exec_stmt(fn->body);
     g_call_depth--;
     rv = g_return_value;                 /* transfer ownership out */
     g_returning = saved_r; g_return_value = saved_v;
+    g_loop_signal = saved_sig;           /* break/continue never crosses a call */
 
     symtab_pop_scope();
     return rv;
@@ -787,7 +793,7 @@ void exec_stmt(const Stmt *s) {
         }
         case S_BLOCK: {
             Stmt *p;
-            for (p = s->body; p != NULL && !g_returning; p = p->next) exec_stmt(p);
+            for (p = s->body; p != NULL && !g_returning && !g_loop_signal; p = p->next) exec_stmt(p);
             break;
         }
         case S_IF:
@@ -795,7 +801,11 @@ void exec_stmt(const Stmt *s) {
             else if (s->body2) exec_stmt(s->body2);
             break;
         case S_WHILE:
-            while (!g_returning && eval_truthy(s->a)) exec_stmt(s->body);
+            while (!g_returning && eval_truthy(s->a)) {
+                exec_stmt(s->body);
+                if (g_loop_signal == LOOP_BREAK) { g_loop_signal = LOOP_NONE; break; }
+                if (g_loop_signal == LOOP_CONTINUE) g_loop_signal = LOOP_NONE;
+            }
             break;
         case S_FOREACH: {
             Value coll = eval_expr(s->a);
@@ -806,6 +816,8 @@ void exec_stmt(const Stmt *s) {
                     symtab_set(s->str, el);
                     value_free(el);
                     exec_stmt(s->body);
+                    if (g_loop_signal == LOOP_BREAK) { g_loop_signal = LOOP_NONE; break; }
+                    if (g_loop_signal == LOOP_CONTINUE) g_loop_signal = LOOP_NONE;
                 }
             } else if (coll.type == VAL_OBJ) {
                 MapEntry *e;
@@ -814,6 +826,8 @@ void exec_stmt(const Stmt *s) {
                     symtab_set(s->str, k);
                     value_free(k);
                     exec_stmt(s->body);
+                    if (g_loop_signal == LOOP_BREAK) { g_loop_signal = LOOP_NONE; break; }
+                    if (g_loop_signal == LOOP_CONTINUE) g_loop_signal = LOOP_NONE;
                 }
             } else {
                 runtime_error("savoforeach expects an array or object");
@@ -828,6 +842,12 @@ void exec_stmt(const Stmt *s) {
             value_free(g_return_value);
             g_return_value = s->a ? eval_expr(s->a) : value_num(0);
             g_returning = 1;
+            break;
+        case S_BREAK:
+            g_loop_signal = LOOP_BREAK;
+            break;
+        case S_CONTINUE:
+            g_loop_signal = LOOP_CONTINUE;
             break;
         case S_PUSH: {
             Value arr = symtab_get(s->str);   /* shares the array by reference */
