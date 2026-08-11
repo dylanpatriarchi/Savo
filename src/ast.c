@@ -708,6 +708,7 @@ Stmt *stmt_if(Expr *cond, Stmt *thenb, Stmt *elseb) { Stmt *s = new_stmt(S_IF); 
 Stmt *stmt_while(Expr *cond, Stmt *body) { Stmt *s = new_stmt(S_WHILE); s->a = cond; s->body = body; return s; }
 Stmt *stmt_foreach(char *var, Expr *coll, Stmt *body) { Stmt *s = new_stmt(S_FOREACH); s->str = var; s->a = coll; s->body = body; return s; }
 Stmt *stmt_return(Expr *e) { Stmt *s = new_stmt(S_RETURN); s->a = e; return s; }
+Stmt *stmt_assert(Expr *cond, char *msg) { Stmt *s = new_stmt(S_ASSERT); s->a = cond; s->str = msg; return s; }
 Stmt *stmt_push(char *name, Expr *e) { Stmt *s = new_stmt(S_PUSH); s->str = name; s->a = e; return s; }
 Stmt *stmt_setindex(Expr *target, Expr *value) { Stmt *s = new_stmt(S_SETINDEX); s->a = target; s->b = value; return s; }
 Stmt *stmt_block_new(void) { return new_stmt(S_BLOCK); }
@@ -954,6 +955,18 @@ void exec_stmt(const Stmt *s) {
         case S_CONTINUE:
             g_loop_signal = LOOP_CONTINUE;
             break;
+        case S_ASSERT: {
+            Value v = eval_expr(s->a);
+            int ok = value_truthy(v);
+            value_free(v);
+            if (!ok) {
+                char buf[300];
+                if (s->str) snprintf(buf, sizeof buf, "assertion failed: %s", s->str);
+                else        snprintf(buf, sizeof buf, "assertion failed");
+                runtime_error(buf);
+            }
+            break;
+        }
         case S_PUSH: {
             Value arr = symtab_get(s->str);   /* shares the array by reference */
             if (arr.type != VAL_ARR) runtime_error("savopush on a non-array variable");
