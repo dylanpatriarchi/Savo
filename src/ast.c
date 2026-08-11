@@ -147,9 +147,9 @@ static Expr **args_to_array(Arg *args, int *out_n) {
     return items;
 }
 
-Expr *expr_calluser(char *name, Arg *args) {
+Expr *expr_calluser(Expr *callee, Arg *args) {
     Expr *e = new_expr(E_CALLUSER);
-    e->as.ucall.name = name;
+    e->as.ucall.callee = callee;
     e->as.ucall.argv = args_to_array(args, &e->as.ucall.argc);
     return e;
 }
@@ -194,35 +194,25 @@ static double eval_num(const Expr *e);
 #define MAX_CALL_DEPTH 1000
 static int g_call_depth = 0;
 
-static Value call_user(const Expr *e) {
-    Stmt *fn = func_lookup(e->as.ucall.name);
+/* Invoke a function with already-evaluated arguments (borrowed; the callee
+ * keeps its own copies). Shared by named calls and the higher-order builtins. */
+static Value invoke_func(Stmt *fn, Value *argv, int argc) {
     int i, saved_r, saved_sig;
-    Value saved_v, rv, *values;
+    Value saved_v, rv;
 
-    if (fn == NULL) { runtime_error("call to undefined function"); return value_num(0); }
-    if (e->as.ucall.argc != fn->nparams) {
+    if (argc != fn->nparams) {
         runtime_error("wrong number of arguments in function call");
-        return value_num(0);
+        return value_nil();
     }
     if (g_call_depth >= MAX_CALL_DEPTH) {
         runtime_error("maximum call depth exceeded (infinite recursion?)");
-        return value_num(0);
+        return value_nil();
     }
-
-    /* Evaluate arguments in the caller's scope, before creating the new one. */
-    values = e->as.ucall.argc ? xmalloc(sizeof(Value) * e->as.ucall.argc) : NULL;
-    for (i = 0; i < e->as.ucall.argc; i++)
-        values[i] = eval_expr(e->as.ucall.argv[i]);
 
     symtab_push_scope();
-    for (i = 0; i < fn->nparams; i++) {
-        symtab_set(fn->params[i], values[i]);
-        value_free(values[i]);
-    }
-    free(values);
+    for (i = 0; i < fn->nparams; i++) symtab_set(fn->params[i], argv[i]);
 
-    saved_r = g_returning; saved_v = g_return_value;
-    saved_sig = g_loop_signal;
+    saved_r = g_returning; saved_v = g_return_value; saved_sig = g_loop_signal;
     g_returning = 0; g_return_value = value_num(0); g_loop_signal = LOOP_NONE;
     g_call_depth++;
     exec_stmt(fn->body);
@@ -232,6 +222,32 @@ static Value call_user(const Expr *e) {
     g_loop_signal = saved_sig;           /* break/continue never crosses a call */
 
     symtab_pop_scope();
+    return rv;
+}
+
+static Value call_user(const Expr *e) {
+    Value callee = eval_expr(e->as.ucall.callee);
+    Value rv, *values;
+    Stmt *fn;
+    int i;
+
+    if (callee.type != VAL_FUNC) {
+        runtime_error("attempt to call a value that is not a function");
+        value_free(callee);
+        return value_nil();
+    }
+    fn = (Stmt *) callee.as.func;
+
+    /* Evaluate arguments in the caller's scope, before creating the new one. */
+    values = e->as.ucall.argc ? xmalloc(sizeof(Value) * e->as.ucall.argc) : NULL;
+    for (i = 0; i < e->as.ucall.argc; i++)
+        values[i] = eval_expr(e->as.ucall.argv[i]);
+
+    rv = invoke_func(fn, values, e->as.ucall.argc);
+
+    for (i = 0; i < e->as.ucall.argc; i++) value_free(values[i]);
+    free(values);
+    value_free(callee);
     return rv;
 }
 
@@ -269,6 +285,21 @@ static int array_contains(Value arr, Value x) {
         else if (el.type == VAL_NUM && x.type == VAL_NUM) { if (el.as.num == x.as.num) return 1; }
     }
     return 0;
+}
+
+/* Order two values: a comparator function if given, else numbers ascending and
+ * strings lexicographically. Returns <0, 0 or >0. */
+static Value invoke_func(Stmt *fn, Value *argv, int argc);
+static int compare_values(Value x, Value y, Stmt *cmp) {
+    if (cmp != NULL) {
+        Value args[2]; double d;
+        args[0] = x; args[1] = y;
+        { Value r = invoke_func(cmp, args, 2); d = value_to_number(r); value_free(r); }
+        return d < 0 ? -1 : (d > 0 ? 1 : 0);
+    }
+    if (x.type == VAL_STR && y.type == VAL_STR) return strcmp(x.as.str, y.as.str);
+    { double a = value_to_number(x), b = value_to_number(y);
+      return a < b ? -1 : (a > b ? 1 : 0); }
 }
 
 static Value read_input_line(Value prompt) {
@@ -400,6 +431,65 @@ static Value call_builtin(Builtin fn, Value a, Value b, Value c) {
             }
             return arr;
         }
+        case FN_MAP: {
+            Value out; int i;
+            if (a.type != VAL_ARR) { runtime_error("savomap expects an array"); return value_nil(); }
+            if (b.type != VAL_FUNC) { runtime_error("savomap expects a function"); return value_nil(); }
+            out = value_array();
+            for (i = 0; i < a.as.arr->count; i++) {
+                Value arg = value_copy(a.as.arr->items[i]);
+                Value r = invoke_func((Stmt *) b.as.func, &arg, 1);
+                array_push(out, r);
+                value_free(r); value_free(arg);
+            }
+            return out;
+        }
+        case FN_FILTER: {
+            Value out; int i;
+            if (a.type != VAL_ARR) { runtime_error("savofilter expects an array"); return value_nil(); }
+            if (b.type != VAL_FUNC) { runtime_error("savofilter expects a function"); return value_nil(); }
+            out = value_array();
+            for (i = 0; i < a.as.arr->count; i++) {
+                Value arg = value_copy(a.as.arr->items[i]);
+                Value r = invoke_func((Stmt *) b.as.func, &arg, 1);
+                if (value_truthy(r)) array_push(out, a.as.arr->items[i]);
+                value_free(r); value_free(arg);
+            }
+            return out;
+        }
+        case FN_REDUCE: {
+            Value acc; int i;
+            if (a.type != VAL_ARR) { runtime_error("savoreduce expects an array"); return value_nil(); }
+            if (b.type != VAL_FUNC) { runtime_error("savoreduce expects a function"); return value_nil(); }
+            acc = value_copy(c);   /* initial accumulator */
+            for (i = 0; i < a.as.arr->count; i++) {
+                Value args[2];
+                Value r;
+                args[0] = acc; args[1] = value_copy(a.as.arr->items[i]);
+                r = invoke_func((Stmt *) b.as.func, args, 2);
+                value_free(acc); value_free(args[1]);
+                acc = r;
+            }
+            return acc;
+        }
+        case FN_SORT: {
+            Value out; int i, j;
+            Stmt *cmp = (b.type == VAL_FUNC) ? (Stmt *) b.as.func : NULL;
+            if (a.type != VAL_ARR) { runtime_error("savosort expects an array"); return value_nil(); }
+            out = value_array();
+            for (i = 0; i < a.as.arr->count; i++) { Value v = value_copy(a.as.arr->items[i]); array_push(out, v); value_free(v); }
+            /* insertion sort: arrays are small in a scripting language */
+            for (i = 1; i < out.as.arr->count; i++) {
+                Value key = out.as.arr->items[i];
+                j = i - 1;
+                while (j >= 0 && compare_values(out.as.arr->items[j], key, cmp) > 0) {
+                    out.as.arr->items[j + 1] = out.as.arr->items[j];
+                    j--;
+                }
+                out.as.arr->items[j + 1] = key;
+            }
+            return out;
+        }
         case FN_INPUT:
             return read_input_line(a);
     }
@@ -458,7 +548,14 @@ Value eval_expr(const Expr *e) {
         case E_BOOL: return value_bool((int) e->as.num);
         case E_NIL: return value_nil();
         case E_STR: return value_str_copy(e->as.str);
-        case E_VAR: return symtab_get(e->as.var);
+        case E_VAR:
+            /* a name that is not a variable but is a defined function evaluates
+             * to that function value, so functions can be passed as arguments */
+            if (!symtab_has(e->as.var)) {
+                Stmt *fn = func_lookup(e->as.var);
+                if (fn != NULL) return value_func(fn);
+            }
+            return symtab_get(e->as.var);
         case E_NEG: { Value v = eval_expr(e->as.unary); Value r = value_num(-value_to_number(v)); value_free(v); return r; }
         case E_NOT: { Value v = eval_expr(e->as.unary); Value r = value_bool(!value_truthy(v)); value_free(v); return r; }
         case E_BIN: {
@@ -548,7 +645,7 @@ void free_expr(Expr *e) {
             int i;
             for (i = 0; i < e->as.ucall.argc; i++) free_expr(e->as.ucall.argv[i]);
             free(e->as.ucall.argv);
-            free(e->as.ucall.name);
+            free_expr(e->as.ucall.callee);
             break;
         }
         case E_ARRAY: {

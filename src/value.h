@@ -17,7 +17,8 @@ typedef enum {
     VAL_ARR,
     VAL_OBJ,
     VAL_BOOL,   /* true / false (stored in the num slot as 1 / 0) */
-    VAL_NIL     /* the absence of a value */
+    VAL_NIL,    /* the absence of a value */
+    VAL_FUNC    /* a user function value (points at a retained S_FUNCDEF) */
 } ValueType;
 
 /*
@@ -53,6 +54,7 @@ typedef struct Value {
         char         *str;   /* VAL_STR (owned) */
         struct Array *arr;   /* VAL_ARR (shared, refcounted) */
         struct Map   *obj;   /* VAL_OBJ (shared, refcounted) */
+        void         *func;  /* VAL_FUNC (borrowed S_FUNCDEF, lives forever) */
     } as;
 } Value;
 
@@ -60,6 +62,7 @@ typedef struct Value {
 Value value_num(double n);
 Value value_bool(int b);             /* VAL_BOOL from a truthy int */
 Value value_nil(void);               /* the nil value */
+Value value_func(void *def);         /* wrap a user function (S_FUNCDEF) */
 Value value_str(char *owned);        /* takes ownership of the string */
 Value value_str_copy(const char *s); /* copies the string */
 Value value_array(void);             /* fresh empty array (rc = 1) */

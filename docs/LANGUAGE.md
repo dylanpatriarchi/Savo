@@ -469,6 +469,41 @@ a local that shadows the global rather than overwriting it.
 `savoreturn` with no expression returns `0`. A function that never calls
 `savoreturn` also yields `0`.
 
+### Functions as values
+
+A function name used without a call is a **first-class value**: store it in a
+variable, pass it as an argument, and call it later.
+
+```savo
+savodef double(@x)
+    savoreturn @x * 2
+savoend
+savovar @f = double        # @f now holds the function
+savoprint @f(21)           # 42.00
+```
+
+This powers the higher-order builtins, which take a function and an array:
+
+| Function | Result |
+|----------|--------|
+| `savomap(@a, fn)`      | a new array with `fn` applied to each element |
+| `savofilter(@a, fn)`   | the elements for which `fn(el)` is truthy |
+| `savoreduce(@a, fn, init)` | fold left: `acc = fn(acc, el)` starting from `init` |
+| `savosort(@a [, cmp])` | a sorted copy; `cmp(a, b)` returns negative / 0 / positive |
+
+```savo
+savodef isEven(@x)
+    savoreturn @x % 2 == 0
+savoend
+savoprint savomap([1, 2, 3], double)          # [2.00, 4.00, 6.00]
+savoprint savofilter([1, 2, 3, 4], isEven)    # [2.00, 4.00]
+savoprint savoreduce([1, 2, 3, 4], double, 0) # (folds with any 2-arg fn)
+savoprint savosort([3, 1, 2])                 # [1.00, 2.00, 3.00]
+```
+
+Without a comparator, `savosort` orders numbers ascending and strings
+lexicographically.
+
 ```savo
 savodir             # list files in the current directory (alias: savols)
 savols "*.savo"     # list files matching an argument
@@ -526,6 +561,9 @@ terminal it runs the interactive REPL with the banner and `>>>` prompt.
 | `savocontains` | `(coll, x)` | Membership in an array/string/object |
 | `savokeys` | `(@o)` | Object keys as an array |
 | `savoinput` | `([prompt])` | Read a line from standard input |
+| `savomap` / `savofilter` | `(@a, fn)` | Map / filter an array through a function |
+| `savoreduce` | `(@a, fn, init)` | Fold an array with a 2-argument function |
+| `savosort` | `(@a [, cmp])` | Sorted copy, optionally by a comparator |
 | `savoset` | `<lvalue> = <expr>` (e.g. `@a[i]`, `@o.k`, `@t.a.b[i]`) | Set an array element or object field, at any nesting depth |
 | `savoforeach` | `@item <coll> … savoend` | Iterate an array or object |
 | `savosum` | `<value> <value>` | Add |

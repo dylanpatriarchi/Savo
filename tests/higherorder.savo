@@ -1,0 +1,29 @@
+# First-class functions and the higher-order builtins.
+savodef double(@x)
+    savoreturn @x * 2
+savoend
+savodef isEven(@x)
+    savoreturn @x % 2 == 0
+savoend
+savodef add(@a, @b)
+    savoreturn @a + @b
+savoend
+
+# a function stored in a variable and called through it
+savovar @f = double
+savoprint @f(21)
+
+savoprint savomap([1, 2, 3, 4], double)
+savoprint savofilter([1, 2, 3, 4, 5, 6], isEven)
+savoprint savoreduce([1, 2, 3, 4, 5], add, 0)
+
+# default sort (numbers, then strings) and a custom comparator
+savoprint savosort([3, 1, 4, 1, 5, 9, 2, 6])
+savoprint savosort(["banana", "apple", "cherry"])
+savodef desc(@a, @b)
+    savoreturn @b - @a
+savoend
+savoprint savosort([3, 1, 4, 1, 5], desc)
+
+# composition: filter then map
+savoprint savomap(savofilter([1, 2, 3, 4, 5, 6], isEven), double)

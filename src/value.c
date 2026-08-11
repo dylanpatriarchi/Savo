@@ -22,6 +22,10 @@ Value value_nil(void) {
     Value v; v.type = VAL_NIL; v.as.num = 0; return v;
 }
 
+Value value_func(void *def) {
+    Value v; v.type = VAL_FUNC; v.as.func = def; return v;
+}
+
 Value value_str(char *owned) {
     Value v; v.type = VAL_STR; v.as.str = owned ? owned : xstrdup(""); return v;
 }
@@ -166,7 +170,7 @@ Value array_pop(Value v) {
 
 double value_to_number(Value v) {
     if (v.type == VAL_NUM || v.type == VAL_BOOL) return v.as.num;
-    if (v.type == VAL_NIL) return 0;
+    if (v.type == VAL_NIL || v.type == VAL_FUNC) return 0;
     if (v.type == VAL_ARR) return v.as.arr->count;   /* arrays coerce to length */
     if (v.type == VAL_OBJ) return v.as.obj->count;   /* objects coerce to size  */
     return atof(v.as.str);
@@ -203,6 +207,9 @@ static void repr_into(char **buf, size_t *len, size_t *cap, Value v, int quote_s
             break;
         case VAL_NIL:
             sb_append(buf, len, cap, "nil");
+            break;
+        case VAL_FUNC:
+            sb_append(buf, len, cap, "<function>");
             break;
         case VAL_STR:
             if (quote_str) sb_append(buf, len, cap, "\"");
@@ -249,6 +256,7 @@ char *value_to_string(Value v) {
 
 int value_truthy(Value v) {
     if (v.type == VAL_NUM || v.type == VAL_BOOL) return v.as.num != 0;
+    if (v.type == VAL_FUNC) return 1;
     if (v.type == VAL_NIL) return 0;
     if (v.type == VAL_ARR) return v.as.arr->count != 0;
     if (v.type == VAL_OBJ) return v.as.obj->count != 0;

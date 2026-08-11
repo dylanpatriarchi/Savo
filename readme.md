@@ -69,7 +69,7 @@ its line number and the interpreter keeps going with the next line.
 | Objects     | `{ k: v }` literals, `@o.field` / `@o["k"]` access, `savoset`, `savolen`, `savokeys`, `savocontains` |
 | Control     | `savoif`/`savoelif`/`savoelse`/`savoend`, `savowhile`, `savofor`, `savoforeach`, `savobreak`, `savocontinue` |
 | Input       | `savoinput` |
-| Functions   | `savodef`/`savoreturn` |
+| Functions   | `savodef`/`savoreturn`, first-class function values, `savomap`/`savofilter`/`savoreduce`/`savosort` |
 | Console     | `savodir`, `savols`, `savocls`, `savoclear`, `savopointercell`, `savohelp`, `savoquit`, `savoexit` |
 
 Values are **dynamically typed** — a variable holds a number, a boolean, `nil`,
