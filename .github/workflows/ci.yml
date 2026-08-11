@@ -30,3 +30,19 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build and test under sanitizers
         run: make asan
+
+  fuzz:
+    name: fuzz smoke (advisory)
+    runs-on: ubuntu-latest
+    # Advisory: random input can produce a valid infinite loop that libFuzzer
+    # reports as a timeout, so a failure here does not block the build.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the libFuzzer target
+        run: make fuzz
+      - name: Fuzz for 60s from a seed corpus
+        run: |
+          mkdir -p corpus
+          cp tests/*.savo examples/*.savo corpus/ 2>/dev/null || true
+          ./fuzz_savo -max_total_time=60 -timeout=10 -rss_limit_mb=2048 corpus

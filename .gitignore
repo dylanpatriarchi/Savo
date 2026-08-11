@@ -3,6 +3,11 @@
 /savo.exe
 /libsavo.a
 /embed
+/fuzz_savo
+/corpus/
+crash-*
+timeout-*
+oom-*
 *.dSYM/
 
 # Editor / OS noise
