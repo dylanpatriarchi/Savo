@@ -1,0 +1,37 @@
+# savobreak / savocontinue in while and foreach loops.
+savovar @i = 0
+savowhile (@i < 10)
+    savovar @i = @i + 1
+    savoif (@i == 3)
+        savocontinue
+    savoend
+    savoif (@i == 6)
+        savobreak
+    savoend
+    savoprint @i
+savoend
+savoprint "---\n"
+
+savoforeach @n [1, 2, 3, 4, 5, 6, 7, 8]
+    savoif (@n > 5)
+        savobreak
+    savoend
+    savoif (@n == 2)
+        savocontinue
+    savoend
+    savoprint @n
+savoend
+savoprint "---\n"
+
+# break inside a function must not affect the caller's loop
+savodef noop()
+    savobreak
+    savoreturn 0
+savoend
+savovar @k = 0
+savowhile (@k < 3)
+    savoprint @k
+    savovar @dummy = noop()
+    savovar @k = @k + 1
+savoend
+savoprint "caller loop completed\n"
