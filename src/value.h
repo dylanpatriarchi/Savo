@@ -15,7 +15,9 @@ typedef enum {
     VAL_NUM,
     VAL_STR,
     VAL_ARR,
-    VAL_OBJ
+    VAL_OBJ,
+    VAL_BOOL,   /* true / false (stored in the num slot as 1 / 0) */
+    VAL_NIL     /* the absence of a value */
 } ValueType;
 
 /*
@@ -56,6 +58,8 @@ typedef struct Value {
 
 /* constructors */
 Value value_num(double n);
+Value value_bool(int b);             /* VAL_BOOL from a truthy int */
+Value value_nil(void);               /* the nil value */
 Value value_str(char *owned);        /* takes ownership of the string */
 Value value_str_copy(const char *s); /* copies the string */
 Value value_array(void);             /* fresh empty array (rc = 1) */
