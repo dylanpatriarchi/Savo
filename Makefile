@@ -3,36 +3,29 @@
 #   make            build the `savo` interpreter
 #   make run        build, then start the interactive REPL
 #   make example    build, then run examples/demo.savo
+#   make test       build, then run the golden-file test suite
+#   make asan       build with AddressSanitizer + UBSan, then run the tests
 #   make clean      remove build artifacts and the binary
+#
+# The lexer and parser are hand-written C — no flex/bison toolchain required.
 
 CC       := cc
-CFLAGS   := -Wall -O2 -Isrc -Ibuild
+CFLAGS   := -Wall -Wextra -O2 -Isrc
 LDLIBS   := -lm
 
 SRC      := src
-BUILD    := build
 BIN      := savo
 
-CORE_SRCS := $(SRC)/global.c $(SRC)/value.c $(SRC)/symtab.c $(SRC)/ast.c
-GEN_SRCS  := $(BUILD)/parser.tab.c $(BUILD)/lex.yy.c
-HEADERS   := $(wildcard $(SRC)/*.h)
+SRCS     := $(SRC)/main.c $(SRC)/lexer.c $(SRC)/parser.c \
+            $(SRC)/global.c $(SRC)/value.c $(SRC)/symtab.c $(SRC)/ast.c
+HEADERS  := $(wildcard $(SRC)/*.h)
 
-.PHONY: all run example test clean
+.PHONY: all run example test asan clean
 
 all: $(BIN)
 
-$(BUILD):
-	mkdir -p $(BUILD)
-
-# Bison generates both the parser and the token header used by the lexer.
-$(BUILD)/parser.tab.c $(BUILD)/parser.tab.h: $(SRC)/parser.y | $(BUILD)
-	bison -d -o $(BUILD)/parser.tab.c $(SRC)/parser.y
-
-$(BUILD)/lex.yy.c: $(SRC)/lexer.l $(BUILD)/parser.tab.h | $(BUILD)
-	flex -o $(BUILD)/lex.yy.c $(SRC)/lexer.l
-
-$(BIN): $(GEN_SRCS) $(CORE_SRCS) $(HEADERS)
-	$(CC) $(CFLAGS) $(GEN_SRCS) $(CORE_SRCS) -o $(BIN) $(LDLIBS)
+$(BIN): $(SRCS) $(HEADERS)
+	$(CC) $(CFLAGS) $(SRCS) -o $(BIN) $(LDLIBS)
 
 run: $(BIN)
 	./$(BIN)
@@ -43,5 +36,11 @@ example: $(BIN)
 test: $(BIN)
 	@sh tests/run.sh
 
+# Build with sanitizers and run the suite; catches memory errors and UB.
+asan: CFLAGS := -Wall -Wextra -g -fsanitize=address,undefined -Isrc
+asan: clean $(BIN)
+	@sh tests/run.sh
+
 clean:
-	rm -rf $(BUILD) $(BIN) savo.exe
+	rm -rf build $(BIN).dSYM
+	rm -f $(BIN) savo.exe
