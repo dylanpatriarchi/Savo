@@ -53,6 +53,15 @@ void func_define(Stmt *def) {
     g_functions = def;
 }
 
+/* Release every registered function at shutdown. The table is a plain ->next
+ * chain of S_FUNCDEF nodes, so a single free_stmt frees them all (and their
+ * bodies). Lets the process exit with no leaked definitions. */
+void func_free_all(void) {
+    Stmt *f = g_functions;
+    g_functions = NULL;
+    free_stmt(f);
+}
+
 /* Small builders for parameter / argument lists (used by the parser). */
 Param *param_add(Param *list, char *name) {
     Param *p = xmalloc(sizeof(Param)), *tail;

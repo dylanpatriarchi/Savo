@@ -221,6 +221,7 @@ int main(int argc, char **argv) {
 
     yyparse();
     symtab_free();
+    func_free_all();
     return had_error;
 }
 
