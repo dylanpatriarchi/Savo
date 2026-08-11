@@ -28,6 +28,8 @@ all valid).
 | Element     | Description | Examples |
 |-------------|-------------|----------|
 | Number      | Integer or decimal, optionally negative. Stored as a float. | `42`, `3.14`, `-17`, `.5` |
+| Boolean     | `savotrue` or `savofalse`. | `savotrue` |
+| Nil         | `savonil` — the absence of a value. | `savonil` |
 | String      | Double-quoted. Supports `\n`, `\t`, `\r`, `\\`, `\"` escapes. | `"hello\n"` |
 | Variable    | An `@`-prefixed identifier. | `@x`, `@total` |
 | Comment     | `#` to end of line; ignored. | `# a note` |
@@ -36,9 +38,11 @@ Whitespace and blank lines are insignificant.
 
 ## Values and variables
 
-Savo values are **dynamically typed**: a variable holds either a number or a
-string, and the type is decided at run time. Variables are created and updated
-with `savovar`, which has two forms:
+Savo values are **dynamically typed**: a variable holds a number, a boolean,
+`nil`, a string, an array or an object, and the type is decided at run time.
+`savotrue`/`savofalse` are the booleans and `savonil` is the absence of a value
+(falsy, coerces to `0` and to the empty string). Variables are created and
+updated with `savovar`, which has two forms:
 
 ```savo
 savovar @x 10          # define/echo:  prints "Variabile @x = 10.00"
@@ -50,7 +54,8 @@ The bare form (no `=`) echoes the assignment, which is handy in the REPL. The
 [expression](#expressions).
 
 Referencing an undefined variable prints a warning to stderr and evaluates to
-`0`, so a script keeps running rather than crashing.
+`nil`, so a script keeps running rather than crashing. Reading a missing object
+key or an out-of-range array index likewise yields `nil`.
 
 ## Expressions
 
@@ -70,7 +75,8 @@ savoprint savopow(2, 10) + 1        # 1025.00
 
 Operator precedence, from lowest to highest: `||`; `&&`; comparisons; `+` `-`;
 `*` `/` `%`; then unary `-` and `!`. Comparisons and the logical operators
-evaluate to `1` (true) or `0` (false).
+evaluate to the booleans `savotrue` / `savofalse` (which coerce to `1` / `0` in
+arithmetic).
 
 `&&` and `||` **short-circuit**: the right-hand side is evaluated only when the
 left side does not already decide the result, so `@x != 0 && 10 / @x > 1` is

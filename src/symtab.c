@@ -55,8 +55,8 @@ Value symtab_get(const char *name) {
         Symbol *s = find_local(scope, name);
         if (s != NULL) return value_copy(s->value);
     }
-    savo_warn("undefined variable '%s' (using 0)", name);
-    return value_num(0);
+    savo_warn("undefined variable '%s' (using nil)", name);
+    return value_nil();
 }
 
 int symtab_has(const char *name) {

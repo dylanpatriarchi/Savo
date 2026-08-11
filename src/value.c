@@ -14,6 +14,14 @@ Value value_num(double n) {
     Value v; v.type = VAL_NUM; v.as.num = n; return v;
 }
 
+Value value_bool(int b) {
+    Value v; v.type = VAL_BOOL; v.as.num = b ? 1 : 0; return v;
+}
+
+Value value_nil(void) {
+    Value v; v.type = VAL_NIL; v.as.num = 0; return v;
+}
+
 Value value_str(char *owned) {
     Value v; v.type = VAL_STR; v.as.str = owned ? owned : xstrdup(""); return v;
 }
@@ -100,8 +108,8 @@ void object_set(Value v, const char *key, Value elem) {
 Value object_get(Value v, const char *key) {
     MapEntry *e = map_find(v.as.obj, key);
     if (e == NULL) {
-        savo_warn("object has no key '%s' (using 0)", key);
-        return value_num(0);
+        savo_warn("object has no key '%s' (using nil)", key);
+        return value_nil();
     }
     return value_copy(*e->val);
 }
@@ -123,8 +131,8 @@ int array_length(Value v) { return v.as.arr->count; }
 Value array_get(Value v, int i) {
     Array *a = v.as.arr;
     if (i < 0 || i >= a->count) {
-        savo_warn("array index %d out of range (using 0)", i);
-        return value_num(0);
+        savo_warn("array index %d out of range (using nil)", i);
+        return value_nil();
     }
     return value_copy(a->items[i]);
 }
@@ -150,14 +158,15 @@ void array_set(Value v, int i, Value elem) {
 Value array_pop(Value v) {
     Array *a = v.as.arr;
     if (a->count == 0) {
-        savo_warn("pop from an empty array (using 0)");
-        return value_num(0);
+        savo_warn("pop from an empty array (using nil)");
+        return value_nil();
     }
     return a->items[--a->count];
 }
 
 double value_to_number(Value v) {
-    if (v.type == VAL_NUM) return v.as.num;
+    if (v.type == VAL_NUM || v.type == VAL_BOOL) return v.as.num;
+    if (v.type == VAL_NIL) return 0;
     if (v.type == VAL_ARR) return v.as.arr->count;   /* arrays coerce to length */
     if (v.type == VAL_OBJ) return v.as.obj->count;   /* objects coerce to size  */
     return atof(v.as.str);
@@ -188,6 +197,12 @@ static void repr_into(char **buf, size_t *len, size_t *cap, Value v, int quote_s
         case VAL_NUM:
             snprintf(tmp, sizeof tmp, "%.2f", v.as.num);
             sb_append(buf, len, cap, tmp);
+            break;
+        case VAL_BOOL:
+            sb_append(buf, len, cap, v.as.num ? "true" : "false");
+            break;
+        case VAL_NIL:
+            sb_append(buf, len, cap, "nil");
             break;
         case VAL_STR:
             if (quote_str) sb_append(buf, len, cap, "\"");
@@ -233,7 +248,8 @@ char *value_to_string(Value v) {
 }
 
 int value_truthy(Value v) {
-    if (v.type == VAL_NUM) return v.as.num != 0;
+    if (v.type == VAL_NUM || v.type == VAL_BOOL) return v.as.num != 0;
+    if (v.type == VAL_NIL) return 0;
     if (v.type == VAL_ARR) return v.as.arr->count != 0;
     if (v.type == VAL_OBJ) return v.as.obj->count != 0;
     return v.as.str[0] != '\0';

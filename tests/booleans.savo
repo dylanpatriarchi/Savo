@@ -1,0 +1,27 @@
+# Booleans (savotrue / savofalse) and nil.
+savoprint savotrue
+savoprint savofalse
+savoprint savonil
+
+# Comparisons and logical operators yield booleans.
+savoprint (2 > 1)
+savoprint (2 < 1)
+savoprint (1 == 1) && (3 > 2)
+savoprint !savotrue
+
+# nil is falsy; booleans coerce to numbers in arithmetic.
+savoif (savonil)
+    savoprint "unreachable\n"
+savoelse
+    savoprint "nil is falsy\n"
+savoend
+savoprint savotrue + savotrue
+
+# Absent lookups produce nil.
+savovar @o = {a: 1}
+savoprint @o["b"]
+savovar @arr = [1, 2]
+savoprint @arr[9]
+
+# nil and booleans render inside collections.
+savoprint [savotrue, savofalse, savonil, 7]

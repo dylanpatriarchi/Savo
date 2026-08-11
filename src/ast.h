@@ -33,7 +33,7 @@ typedef enum {
 
 typedef enum {
     E_NUM, E_STR, E_VAR, E_BIN, E_NEG, E_NOT, E_CALL, E_CALLUSER,
-    E_ARRAY, E_INDEX, E_OBJECT
+    E_ARRAY, E_INDEX, E_OBJECT, E_BOOL, E_NIL
 } ExprKind;
 
 typedef struct Expr {
@@ -61,6 +61,8 @@ Arg   *arg_add(Arg *list, Expr *e);          /* append e, return head */
 Pair  *pair_add(Pair *list, char *key, Expr *val); /* append key:val, return head */
 
 Expr *expr_num(double v);
+Expr *expr_bool(int b);                /* true / false literal */
+Expr *expr_nil(void);                  /* nil literal */
 Expr *expr_str(char *owned);           /* takes ownership of the literal */
 Expr *expr_var(char *name);            /* takes ownership of name */
 Expr *expr_bin(BinOp op, Expr *l, Expr *r);

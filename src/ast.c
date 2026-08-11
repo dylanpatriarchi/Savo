@@ -111,6 +111,8 @@ static Expr *new_expr(ExprKind kind) {
 }
 
 Expr *expr_num(double v)             { Expr *e = new_expr(E_NUM); e->as.num = v; return e; }
+Expr *expr_bool(int b)               { Expr *e = new_expr(E_BOOL); e->as.num = b ? 1 : 0; return e; }
+Expr *expr_nil(void)                 { Expr *e = new_expr(E_NIL); return e; }
 Expr *expr_str(char *owned)          { Expr *e = new_expr(E_STR); e->as.str = owned; return e; }
 Expr *expr_var(char *name)           { Expr *e = new_expr(E_VAR); e->as.var = name; return e; }
 Expr *expr_neg(Expr *u)              { Expr *e = new_expr(E_NEG); e->as.unary = u; return e; }
@@ -433,7 +435,7 @@ static Value apply_binop(BinOp op, Value l, Value r) {
                 default: break;
             }
         }
-        return value_num(c ? 1 : 0);
+        return value_bool(c);
     }
 
     {   /* numeric arithmetic */
@@ -453,10 +455,12 @@ Value eval_expr(const Expr *e) {
     if (e == NULL) return value_num(0);
     switch (e->kind) {
         case E_NUM: return value_num(e->as.num);
+        case E_BOOL: return value_bool((int) e->as.num);
+        case E_NIL: return value_nil();
         case E_STR: return value_str_copy(e->as.str);
         case E_VAR: return symtab_get(e->as.var);
         case E_NEG: { Value v = eval_expr(e->as.unary); Value r = value_num(-value_to_number(v)); value_free(v); return r; }
-        case E_NOT: { Value v = eval_expr(e->as.unary); Value r = value_num(value_truthy(v) ? 0 : 1); value_free(v); return r; }
+        case E_NOT: { Value v = eval_expr(e->as.unary); Value r = value_bool(!value_truthy(v)); value_free(v); return r; }
         case E_BIN: {
             Value l, r, res;
             /* Logical operators short-circuit: the right side is evaluated only
@@ -466,10 +470,10 @@ Value eval_expr(const Expr *e) {
                 l = eval_expr(e->as.bin.l);
                 lt = value_truthy(l);
                 value_free(l);
-                if (e->as.bin.op == OP_AND && !lt) return value_num(0);
-                if (e->as.bin.op == OP_OR  &&  lt) return value_num(1);
+                if (e->as.bin.op == OP_AND && !lt) return value_bool(0);
+                if (e->as.bin.op == OP_OR  &&  lt) return value_bool(1);
                 r = eval_expr(e->as.bin.r);
-                res = value_num(value_truthy(r) ? 1 : 0);
+                res = value_bool(value_truthy(r));
                 value_free(r);
                 return res;
             }
@@ -561,7 +565,9 @@ void free_expr(Expr *e) {
             free(e->as.object.vals);
             break;
         }
-        case E_NUM:    break;
+        case E_NUM:
+        case E_BOOL:
+        case E_NIL:    break;
     }
     free(e);
 }
