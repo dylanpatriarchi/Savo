@@ -10,7 +10,12 @@ typedef struct {
     Lexer  *lx;
     Token   cur;
     jmp_buf recover;
+    int     depth;   /* current nesting, to bound recursion (stack safety) */
 } Parser;
+
+/* Deepest expression/block nesting the parser accepts before erroring, so
+ * pathological input like "(((((…" cannot overflow the C stack. */
+#define MAX_PARSE_DEPTH 256
 
 /* ------------------------------ token flow ------------------------------ */
 
@@ -259,7 +264,13 @@ static Expr *parse_expr_bp(Parser *P, int min_bp) {
     return left;
 }
 
-static Expr *parse_expr(Parser *P) { return parse_expr_bp(P, 1); }
+static Expr *parse_expr(Parser *P) {
+    Expr *e;
+    if (++P->depth > MAX_PARSE_DEPTH) { P->depth--; perror_at(P, "expression nesting too deep"); }
+    e = parse_expr_bp(P, 1);
+    P->depth--;
+    return e;
+}
 
 /* a bare loop count: a number or a variable */
 static Expr *parse_count(Parser *P) {
@@ -488,7 +499,9 @@ static Stmt *parse_statement(Parser *P, int allow_def) {
 
 /* newline-separated statements until savoend / savoelse / EOF */
 static Stmt *parse_block(Parser *P) {
-    Stmt *blk = stmt_block_new();
+    Stmt *blk;
+    if (++P->depth > MAX_PARSE_DEPTH) { P->depth--; perror_at(P, "block nesting too deep"); }
+    blk = stmt_block_new();
     for (;;) {
         while (at(P, TK_NEWLINE)) p_advance(P);
         if (at(P, TK_END) || at(P, TK_ELIF) || at(P, TK_ELSE) || at(P, TK_EOF)) break;
@@ -497,6 +510,7 @@ static Stmt *parse_block(Parser *P) {
         else if (at(P, TK_END) || at(P, TK_ELIF) || at(P, TK_ELSE) || at(P, TK_EOF)) break;
         else expect(P, TK_NEWLINE, "end of line");
     }
+    P->depth--;
     return blk;
 }
 
@@ -505,10 +519,12 @@ static Stmt *parse_block(Parser *P) {
 void parser_run(Lexer *lx) {
     Parser P;
     P.lx = lx;
+    P.depth = 0;
     P.cur = lexer_next(lx);
 
     for (;;) {
         if (setjmp(P.recover)) {
+            P.depth = 0;   /* unwound past the nested parsers; reset the counter */
             while (!at(&P, TK_NEWLINE) && !at(&P, TK_EOF)) p_advance(&P);
         }
         if (at(&P, TK_EOF) || savo_quit_flag) break;
