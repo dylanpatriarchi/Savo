@@ -243,6 +243,34 @@ static char *take_string(Parser *P) {
 static Stmt *parse_statement(Parser *P, int allow_def);
 static Stmt *parse_block(Parser *P);
 
+/* Parse what follows a then-block: an optional savoelif chain, an optional
+ * savoelse, and the closing savoend. savoelif desugars to a nested if placed in
+ * the else branch, and only the innermost tail consumes savoend. */
+static Stmt *parse_if_tail(Parser *P) {
+    if (at(P, TK_ELIF)) {
+        Expr *cond;
+        Stmt *thenb, *elseb;
+        p_advance(P);
+        expect(P, TK_LPAREN, "'('");
+        cond = parse_expr(P);
+        expect(P, TK_RPAREN, "')'");
+        expect(P, TK_NEWLINE, "end of line");
+        thenb = parse_block(P);
+        elseb = parse_if_tail(P);
+        return stmt_if(cond, thenb, elseb);
+    }
+    if (at(P, TK_ELSE)) {
+        Stmt *elseb;
+        p_advance(P);
+        expect(P, TK_NEWLINE, "end of line");
+        elseb = parse_block(P);
+        expect(P, TK_END, "savoend");
+        return elseb;
+    }
+    expect(P, TK_END, "savoend");
+    return NULL;
+}
+
 static Stmt *parse_if(Parser *P) {
     Expr *cond;
     Stmt *thenb, *elseb;
@@ -252,15 +280,8 @@ static Stmt *parse_if(Parser *P) {
     expect(P, TK_RPAREN, "')'");
     expect(P, TK_NEWLINE, "end of line");
     thenb = parse_block(P);
-    if (at(P, TK_ELSE)) {
-        p_advance(P);
-        expect(P, TK_NEWLINE, "end of line");
-        elseb = parse_block(P);
-        expect(P, TK_END, "savoend");
-        return stmt_if(cond, thenb, elseb);
-    }
-    expect(P, TK_END, "savoend");
-    return stmt_if(cond, thenb, NULL);
+    elseb = parse_if_tail(P);
+    return stmt_if(cond, thenb, elseb);
 }
 
 static Stmt *parse_while(Parser *P) {
@@ -415,10 +436,10 @@ static Stmt *parse_block(Parser *P) {
     Stmt *blk = stmt_block_new();
     for (;;) {
         while (at(P, TK_NEWLINE)) p_advance(P);
-        if (at(P, TK_END) || at(P, TK_ELSE) || at(P, TK_EOF)) break;
+        if (at(P, TK_END) || at(P, TK_ELIF) || at(P, TK_ELSE) || at(P, TK_EOF)) break;
         stmt_block_add(blk, parse_statement(P, 0));
         if (at(P, TK_NEWLINE)) p_advance(P);
-        else if (at(P, TK_END) || at(P, TK_ELSE) || at(P, TK_EOF)) break;
+        else if (at(P, TK_END) || at(P, TK_ELIF) || at(P, TK_ELSE) || at(P, TK_EOF)) break;
         else expect(P, TK_NEWLINE, "end of line");
     }
     return blk;
