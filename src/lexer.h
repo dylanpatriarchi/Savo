@@ -31,6 +31,7 @@ typedef enum {
     /* operators and punctuation */
     TK_PLUS, TK_MINUS, TK_STAR, TK_SLASH, TK_PERCENT,
     TK_EQ, TK_NE, TK_LT, TK_GT, TK_LE, TK_GE, TK_ASSIGN, TK_NOT,
+    TK_AND, TK_OR,
     TK_LPAREN, TK_RPAREN, TK_LBRACKET, TK_RBRACKET, TK_LBRACE, TK_RBRACE,
     TK_COLON, TK_DOT, TK_COMMA
 } TokKind;

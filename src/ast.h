@@ -17,7 +17,8 @@
 
 typedef enum {
     OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_MOD,
-    OP_EQ, OP_NE, OP_LT, OP_GT, OP_LE, OP_GE
+    OP_EQ, OP_NE, OP_LT, OP_GT, OP_LE, OP_GE,
+    OP_AND, OP_OR   /* short-circuit; handled in eval_expr, not apply_binop */
 } BinOp;
 
 /* Built-in functions usable both as commands and inside expressions. */

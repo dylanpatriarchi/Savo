@@ -296,8 +296,24 @@ Value eval_expr(const Expr *e) {
         case E_NEG: { Value v = eval_expr(e->as.unary); Value r = value_num(-value_to_number(v)); value_free(v); return r; }
         case E_NOT: { Value v = eval_expr(e->as.unary); Value r = value_num(value_truthy(v) ? 0 : 1); value_free(v); return r; }
         case E_BIN: {
-            Value l = eval_expr(e->as.bin.l), r = eval_expr(e->as.bin.r);
-            Value res = apply_binop(e->as.bin.op, l, r);
+            Value l, r, res;
+            /* Logical operators short-circuit: the right side is evaluated only
+             * when the left does not already decide the result. */
+            if (e->as.bin.op == OP_AND || e->as.bin.op == OP_OR) {
+                int lt;
+                l = eval_expr(e->as.bin.l);
+                lt = value_truthy(l);
+                value_free(l);
+                if (e->as.bin.op == OP_AND && !lt) return value_num(0);
+                if (e->as.bin.op == OP_OR  &&  lt) return value_num(1);
+                r = eval_expr(e->as.bin.r);
+                res = value_num(value_truthy(r) ? 1 : 0);
+                value_free(r);
+                return res;
+            }
+            l = eval_expr(e->as.bin.l);
+            r = eval_expr(e->as.bin.r);
+            res = apply_binop(e->as.bin.op, l, r);
             value_free(l); value_free(r);
             return res;
         }

@@ -267,6 +267,10 @@ Token lexer_next(Lexer *lx) {
                       return make(TK_LT, line, col);
             case '>': if (cur(lx) == '=') { advance(lx); return make(TK_GE, line, col); }
                       return make(TK_GT, line, col);
+            case '&': if (cur(lx) == '&') { advance(lx); return make(TK_AND, line, col); }
+                      break;
+            case '|': if (cur(lx) == '|') { advance(lx); return make(TK_OR, line, col); }
+                      break;
             default:  break;
         }
         /* unrecognised byte: report as an error-bearing newline-free token so the

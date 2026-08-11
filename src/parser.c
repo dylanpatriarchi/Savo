@@ -184,18 +184,22 @@ static Expr *parse_atom(Parser *P) {
     return parse_postfix(P, parse_primary(P));
 }
 
-/* binary precedence: comparisons < +,- < *,/,% (0 = not a binary operator) */
+/* binary precedence, loosest to tightest (0 = not a binary operator):
+ *   ||  <  &&  <  comparisons  <  +,-  <  *,/,% */
 static int binprec(TokKind k) {
     switch (k) {
-        case TK_EQ: case TK_NE: case TK_LT: case TK_GT: case TK_LE: case TK_GE: return 1;
-        case TK_PLUS: case TK_MINUS: return 2;
-        case TK_STAR: case TK_SLASH: case TK_PERCENT: return 3;
+        case TK_OR:  return 1;
+        case TK_AND: return 2;
+        case TK_EQ: case TK_NE: case TK_LT: case TK_GT: case TK_LE: case TK_GE: return 3;
+        case TK_PLUS: case TK_MINUS: return 4;
+        case TK_STAR: case TK_SLASH: case TK_PERCENT: return 5;
         default: return 0;
     }
 }
 
 static BinOp bin_of(TokKind k) {
     switch (k) {
+        case TK_OR: return OP_OR;  case TK_AND: return OP_AND;
         case TK_PLUS: return OP_ADD; case TK_MINUS: return OP_SUB;
         case TK_STAR: return OP_MUL; case TK_SLASH: return OP_DIV;
         case TK_PERCENT: return OP_MOD;
