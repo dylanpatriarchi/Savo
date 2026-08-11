@@ -56,6 +56,7 @@ typedef struct {
     int     line, col;
     int     started;     /* whether any line has been read yet (interactive)       */
     int     eof_nl_done; /* emitted the synthetic trailing newline                 */
+    int     input_done;  /* input exhausted: stop calling refill (sticky EOF)      */
 } Lexer;
 
 /* Initialise a lexer over an owned, NUL-terminated buffer (fp == NULL: batch). */

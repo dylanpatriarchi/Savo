@@ -20,7 +20,7 @@ BIN      := savo
 LIB      := libsavo.a
 
 # Core objects make up the embeddable library; main.o is the CLI only.
-CORE     := lexer parser global value symtab ast savo
+CORE     := lexer parser global value symtab ast savo lineedit
 CORE_OBJS := $(addprefix $(BUILD)/,$(addsuffix .o,$(CORE)))
 MAIN_OBJ := $(BUILD)/main.o
 HEADERS  := $(wildcard $(SRC)/*.h)
@@ -47,7 +47,7 @@ embed: $(LIB)
 	$(CC) $(CFLAGS) examples/embed.c $(LIB) $(LDLIBS) -o embed
 
 # Build the libFuzzer target (needs clang). Run: ./fuzz_savo -max_total_time=60 corpus
-FUZZ_SRCS := fuzz/fuzz_savo.c $(addprefix $(SRC)/,lexer.c parser.c global.c value.c symtab.c ast.c savo.c)
+FUZZ_SRCS := fuzz/fuzz_savo.c $(addprefix $(SRC)/,lexer.c parser.c global.c value.c symtab.c ast.c savo.c lineedit.c)
 fuzz:
 	clang -g -O1 -fsanitize=fuzzer,address,undefined -Isrc $(FUZZ_SRCS) $(LDLIBS) -o fuzz_savo
 

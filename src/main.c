@@ -8,6 +8,7 @@
 #include "parser.h"
 #include "ast.h"
 #include "symtab.h"
+#include "lineedit.h"
 
 static void usage(const char *prog) {
     printf("Savo %s — a tiny scripting language\n\n", SAVO_VERSION);
@@ -102,5 +103,6 @@ int main(int argc, char **argv) {
     lexer_free(&lx);
     symtab_free();
     func_free_all();
+    savo_history_free();
     return had_error;
 }

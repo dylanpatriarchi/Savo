@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include "lexer.h"
 #include "global.h"
+#include "lineedit.h"
 
 /* ------------------------------- keywords ------------------------------- */
 
@@ -84,6 +85,7 @@ void lexer_init_buffer(Lexer *lx, char *owned_buf) {
     lx->col = 1;
     lx->started = 1;
     lx->eof_nl_done = 0;
+    lx->input_done = 0;
 }
 
 void lexer_init_stream(Lexer *lx, FILE *fp, int interactive) {
@@ -97,6 +99,7 @@ void lexer_init_stream(Lexer *lx, FILE *fp, int interactive) {
     lx->col = 1;
     lx->started = 0;
     lx->eof_nl_done = 0;
+    lx->input_done = 0;
 }
 
 void lexer_free(Lexer *lx) {
@@ -109,9 +112,32 @@ void lexer_free(Lexer *lx) {
 static int refill(Lexer *lx) {
     ssize_t got;
     if (lx->fp == NULL) return 0;
-    if (lx->interactive && strlen(prompt) > 0) { printf("%s", prompt); fflush(stdout); }
-    got = getline(&lx->buf, &lx->cap, lx->fp);
     lx->started = 1;
+
+    if (lx->interactive) {
+        /* The line editor handles the prompt, history and cursor movement, then
+         * returns the line without a newline; re-add one so the lexer still sees
+         * a NEWLINE token terminating the line. */
+        char  *line = savo_readline(prompt);
+        size_t n;
+        if (line == NULL) { lx->len = 0; lx->pos = 0; return 0; }
+        savo_history_add(line);
+        n = strlen(line);
+        if (n + 2 > lx->cap) {
+            char *nb = realloc(lx->buf, n + 2);
+            if (nb == NULL) { free(line); fprintf(stderr, "savo: out of memory\n"); exit(1); }
+            lx->buf = nb; lx->cap = n + 2;
+        }
+        memcpy(lx->buf, line, n);
+        lx->buf[n] = '\n';
+        lx->buf[n + 1] = '\0';
+        lx->len = n + 1;
+        lx->pos = 0;
+        free(line);
+        return 1;
+    }
+
+    got = getline(&lx->buf, &lx->cap, lx->fp);
     if (got < 0) { lx->len = 0; lx->pos = 0; return 0; }
     lx->len = (size_t) got;
     lx->pos = 0;
@@ -121,8 +147,8 @@ static int refill(Lexer *lx) {
 /* Peek the current character, refilling from the stream if needed. -1 at EOF. */
 static int cur(Lexer *lx) {
     if (lx->pos >= lx->len) {
-        if (!refill(lx)) return -1;
-        if (lx->len == 0) return -1;
+        if (lx->input_done) return -1;   /* sticky EOF: never refill again */
+        if (!refill(lx) || lx->len == 0) { lx->input_done = 1; return -1; }
     }
     return (unsigned char) lx->buf[lx->pos];
 }
