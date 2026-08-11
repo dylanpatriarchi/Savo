@@ -147,4 +147,5 @@ terminating the host process. See [`examples/embed.c`](examples/embed.c).
 
 Contributions are welcome — please open an issue or a pull request. Run
 `make test` (and, ideally, `make asan`) before opening a PR; CI runs the suite
-on Linux and macOS, plus an AddressSanitizer/UBSan build, on every push.
+on Linux and macOS, plus an AddressSanitizer/UBSan build and a libFuzzer smoke
+run (`make fuzz`), on every push.

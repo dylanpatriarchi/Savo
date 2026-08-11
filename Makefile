@@ -25,7 +25,7 @@ CORE_OBJS := $(addprefix $(BUILD)/,$(addsuffix .o,$(CORE)))
 MAIN_OBJ := $(BUILD)/main.o
 HEADERS  := $(wildcard $(SRC)/*.h)
 
-.PHONY: all run example test asan lib embed clean
+.PHONY: all run example test asan lib embed fuzz clean
 
 all: $(BIN)
 
@@ -45,6 +45,11 @@ $(LIB): $(CORE_OBJS)
 # Build the embedding demo against the library (see examples/embed.c).
 embed: $(LIB)
 	$(CC) $(CFLAGS) examples/embed.c $(LIB) $(LDLIBS) -o embed
+
+# Build the libFuzzer target (needs clang). Run: ./fuzz_savo -max_total_time=60 corpus
+FUZZ_SRCS := fuzz/fuzz_savo.c $(addprefix $(SRC)/,lexer.c parser.c global.c value.c symtab.c ast.c savo.c)
+fuzz:
+	clang -g -O1 -fsanitize=fuzzer,address,undefined -Isrc $(FUZZ_SRCS) $(LDLIBS) -o fuzz_savo
 
 run: $(BIN)
 	./$(BIN)
