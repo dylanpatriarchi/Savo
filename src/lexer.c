@@ -192,7 +192,12 @@ Token lexer_next(Lexer *lx) {
             size_t start = lx->pos;
             Token t;
             while (isdigit(cur(lx))) advance(lx);
-            if (cur(lx) == '.') { advance(lx); while (isdigit(cur(lx))) advance(lx); }
+            /* a '.' is part of the number only when a digit follows, so that
+             * `3.foo` stays 3 followed by the '.' field operator (as before). */
+            if (cur(lx) == '.' && isdigit(peek2(lx))) {
+                advance(lx);
+                while (isdigit(cur(lx))) advance(lx);
+            }
             t = make(TK_NUMBER, line, col);
             { char *s = slice(lx, start); t.num = atof(s); free(s); }
             return t;
