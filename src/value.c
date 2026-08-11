@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "value.h"
+#include "global.h"
 
 static char *xstrdup(const char *s) {
     char *p = strdup(s ? s : "");
@@ -99,7 +100,7 @@ void object_set(Value v, const char *key, Value elem) {
 Value object_get(Value v, const char *key) {
     MapEntry *e = map_find(v.as.obj, key);
     if (e == NULL) {
-        fprintf(stderr, "savo: object has no key '%s' (using 0)\n", key);
+        savo_warn("object has no key '%s' (using 0)", key);
         return value_num(0);
     }
     return value_copy(*e->val);
@@ -122,7 +123,7 @@ int array_length(Value v) { return v.as.arr->count; }
 Value array_get(Value v, int i) {
     Array *a = v.as.arr;
     if (i < 0 || i >= a->count) {
-        fprintf(stderr, "savo: array index %d out of range (using 0)\n", i);
+        savo_warn("array index %d out of range (using 0)", i);
         return value_num(0);
     }
     return value_copy(a->items[i]);
@@ -134,9 +135,9 @@ Value array_get(Value v, int i) {
 
 void array_set(Value v, int i, Value elem) {
     Array *a = v.as.arr;
-    if (i < 0) { fprintf(stderr, "savo: array index %d out of range\n", i); return; }
+    if (i < 0) { savo_warn("array index %d out of range", i); return; }
     if (i > a->count && i - a->count > ARRAY_MAX_GROW) {
-        fprintf(stderr, "savo: array index %d too far past the end to grow to\n", i);
+        savo_warn("array index %d too far past the end to grow to", i);
         return;
     }
     while (a->count <= i) array_push(v, value_num(0));   /* grow with zeros */
@@ -149,7 +150,7 @@ void array_set(Value v, int i, Value elem) {
 Value array_pop(Value v) {
     Array *a = v.as.arr;
     if (a->count == 0) {
-        fprintf(stderr, "savo: pop from an empty array (using 0)\n");
+        savo_warn("pop from an empty array (using 0)");
         return value_num(0);
     }
     return a->items[--a->count];

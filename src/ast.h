@@ -105,6 +105,7 @@ typedef enum { FOR_NONE, FOR_PLUS, FOR_MUL } ForMode;
 
 typedef struct Stmt {
     StmtKind kind;
+    int          line;    /* source line, for runtime error messages */
     /* generic slots reused per kind; see constructors for meaning */
     char        *str;
     char        *str2;
