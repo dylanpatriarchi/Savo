@@ -56,8 +56,8 @@ Referencing an undefined variable prints a warning to stderr and evaluates to
 
 Anywhere Savo expects a number you can write a full expression: number
 literals, variables, the operators `+ - * / %`, the comparisons
-`== != < > <= >=`, logical negation `!`, parentheses, and calls to the built-in
-functions.
+`== != < > <= >=`, the logical operators `&& || !`, parentheses, and calls to
+the built-in functions.
 
 ```savo
 savovar @z = (@x + 2) * 3 - 1
@@ -68,8 +68,22 @@ savovar @h = savosqrt(3 * 3 + 4 * 4)   # nested function call -> 5
 savoprint savopow(2, 10) + 1        # 1025.00
 ```
 
-Operator precedence, from lowest to highest: comparisons; `+` `-`; `*` `/` `%`;
-then unary `-` and `!`. Comparisons evaluate to `1` (true) or `0` (false).
+Operator precedence, from lowest to highest: `||`; `&&`; comparisons; `+` `-`;
+`*` `/` `%`; then unary `-` and `!`. Comparisons and the logical operators
+evaluate to `1` (true) or `0` (false).
+
+`&&` and `||` **short-circuit**: the right-hand side is evaluated only when the
+left side does not already decide the result, so `@x != 0 && 10 / @x > 1` is
+safe when `@x` is zero.
+
+```savo
+savoif (@age >= 18 && @age < 65)
+    savoprint "working age\n"
+savoend
+savoif (@name == "root" || @admin)
+    savoprint "privileged\n"
+savoend
+```
 
 Built-in functions usable in expressions: `savosqrt`, `savoabs`, `savofloor`,
 `savoceil`, `savoround`, `savolog`, `savolog10` (one argument), and
@@ -269,6 +283,21 @@ savoelse
 savoend
 ```
 
+Chain several conditions with `savoelif`, each tested in order until one holds
+(with an optional final `savoelse`):
+
+```savo
+savoif (@grade >= 90)
+    savoprint "A\n"
+savoelif (@grade >= 80)
+    savoprint "B\n"
+savoelif (@grade >= 70)
+    savoprint "C\n"
+savoelse
+    savoprint "F\n"
+savoend
+```
+
 The condition is any [expression](#expressions) (true when non-zero) or a string
 comparison (`"a" == "b"`, `"a" != "b"`). Blocks may be nested.
 
@@ -402,7 +431,7 @@ terminal it runs the interactive REPL with the banner and `>>>` prompt.
 | `savomax` | `<value> <value>` | Maximum |
 | `savomin` | `<value> <value>` | Minimum |
 | `savorandom` | `<min> <max>` | Random integer in range |
-| `savoif` | `(<cond>) … [savoelse …] savoend` | Conditional block |
+| `savoif` | `(<cond>) … [savoelif …] [savoelse …] savoend` | Conditional block |
 | `savowhile` | `(<cond>) … savoend` | While loop |
 | `savodef` | `name(<@params>) … savoend` | Define a function |
 | `savoreturn` | `[<expr>]` | Return a value from a function |
