@@ -97,6 +97,7 @@ typedef enum {
     S_RETURN,      /* savoreturn [expr]                                    */
     S_BREAK,       /* savobreak: exit the nearest loop                     */
     S_CONTINUE,    /* savocontinue: skip to the next loop iteration        */
+    S_ASSERT,      /* savoassert <cond> [message]                          */
     S_PUSH,        /* savopush @a <expr>                                   */
     S_SETINDEX,    /* savoset @a[i] = <expr>                               */
     S_DIR,         /* savodir / savols                                     */
@@ -136,6 +137,7 @@ Stmt *stmt_while(Expr *cond, Stmt *body);
 Stmt *stmt_foreach(char *var, Expr *coll, Stmt *body);  /* savoforeach @v <coll> */
 Stmt *stmt_funcdef(char *name, Param *params, Stmt *body);
 Stmt *stmt_return(Expr *e /*nullable*/);
+Stmt *stmt_assert(Expr *cond, char *msg /*nullable*/);
 Stmt *stmt_push(char *name, Expr *e);           /* savopush @a <expr> */
 Stmt *stmt_setindex(Expr *target, Expr *value); /* savoset <lvalue chain> = <expr> */
 

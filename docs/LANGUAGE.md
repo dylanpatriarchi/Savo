@@ -279,6 +279,17 @@ Printing a **number** appends a newline. Printing a **string** writes it
 verbatim, so include `\n` where you want line breaks (in the REPL a newline is
 added for convenience).
 
+## Assertions
+
+`savoassert <cond>` checks a condition and, when it is falsy, reports
+`assertion failed` (with the line and an optional message) on stderr and marks
+the run as failed, while continuing. It lets you write tests in Savo itself.
+
+```savo
+savoassert 2 + 2 == 4
+savoassert savolen(@items) > 0 "items must not be empty"
+```
+
 ## Input
 
 `savoinput()` reads one line from standard input and returns it as a string
