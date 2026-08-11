@@ -184,18 +184,22 @@ static Expr *parse_atom(Parser *P) {
     return parse_postfix(P, parse_primary(P));
 }
 
-/* binary precedence: comparisons < +,- < *,/,% (0 = not a binary operator) */
+/* binary precedence, loosest to tightest (0 = not a binary operator):
+ *   ||  <  &&  <  comparisons  <  +,-  <  *,/,% */
 static int binprec(TokKind k) {
     switch (k) {
-        case TK_EQ: case TK_NE: case TK_LT: case TK_GT: case TK_LE: case TK_GE: return 1;
-        case TK_PLUS: case TK_MINUS: return 2;
-        case TK_STAR: case TK_SLASH: case TK_PERCENT: return 3;
+        case TK_OR:  return 1;
+        case TK_AND: return 2;
+        case TK_EQ: case TK_NE: case TK_LT: case TK_GT: case TK_LE: case TK_GE: return 3;
+        case TK_PLUS: case TK_MINUS: return 4;
+        case TK_STAR: case TK_SLASH: case TK_PERCENT: return 5;
         default: return 0;
     }
 }
 
 static BinOp bin_of(TokKind k) {
     switch (k) {
+        case TK_OR: return OP_OR;  case TK_AND: return OP_AND;
         case TK_PLUS: return OP_ADD; case TK_MINUS: return OP_SUB;
         case TK_STAR: return OP_MUL; case TK_SLASH: return OP_DIV;
         case TK_PERCENT: return OP_MOD;
@@ -239,6 +243,34 @@ static char *take_string(Parser *P) {
 static Stmt *parse_statement(Parser *P, int allow_def);
 static Stmt *parse_block(Parser *P);
 
+/* Parse what follows a then-block: an optional savoelif chain, an optional
+ * savoelse, and the closing savoend. savoelif desugars to a nested if placed in
+ * the else branch, and only the innermost tail consumes savoend. */
+static Stmt *parse_if_tail(Parser *P) {
+    if (at(P, TK_ELIF)) {
+        Expr *cond;
+        Stmt *thenb, *elseb;
+        p_advance(P);
+        expect(P, TK_LPAREN, "'('");
+        cond = parse_expr(P);
+        expect(P, TK_RPAREN, "')'");
+        expect(P, TK_NEWLINE, "end of line");
+        thenb = parse_block(P);
+        elseb = parse_if_tail(P);
+        return stmt_if(cond, thenb, elseb);
+    }
+    if (at(P, TK_ELSE)) {
+        Stmt *elseb;
+        p_advance(P);
+        expect(P, TK_NEWLINE, "end of line");
+        elseb = parse_block(P);
+        expect(P, TK_END, "savoend");
+        return elseb;
+    }
+    expect(P, TK_END, "savoend");
+    return NULL;
+}
+
 static Stmt *parse_if(Parser *P) {
     Expr *cond;
     Stmt *thenb, *elseb;
@@ -248,15 +280,8 @@ static Stmt *parse_if(Parser *P) {
     expect(P, TK_RPAREN, "')'");
     expect(P, TK_NEWLINE, "end of line");
     thenb = parse_block(P);
-    if (at(P, TK_ELSE)) {
-        p_advance(P);
-        expect(P, TK_NEWLINE, "end of line");
-        elseb = parse_block(P);
-        expect(P, TK_END, "savoend");
-        return stmt_if(cond, thenb, elseb);
-    }
-    expect(P, TK_END, "savoend");
-    return stmt_if(cond, thenb, NULL);
+    elseb = parse_if_tail(P);
+    return stmt_if(cond, thenb, elseb);
 }
 
 static Stmt *parse_while(Parser *P) {
@@ -411,10 +436,10 @@ static Stmt *parse_block(Parser *P) {
     Stmt *blk = stmt_block_new();
     for (;;) {
         while (at(P, TK_NEWLINE)) p_advance(P);
-        if (at(P, TK_END) || at(P, TK_ELSE) || at(P, TK_EOF)) break;
+        if (at(P, TK_END) || at(P, TK_ELIF) || at(P, TK_ELSE) || at(P, TK_EOF)) break;
         stmt_block_add(blk, parse_statement(P, 0));
         if (at(P, TK_NEWLINE)) p_advance(P);
-        else if (at(P, TK_END) || at(P, TK_ELSE) || at(P, TK_EOF)) break;
+        else if (at(P, TK_END) || at(P, TK_ELIF) || at(P, TK_ELSE) || at(P, TK_EOF)) break;
         else expect(P, TK_NEWLINE, "end of line");
     }
     return blk;

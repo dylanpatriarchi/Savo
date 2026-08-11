@@ -1,0 +1,22 @@
+# Logical operators (&&, ||) with short-circuit, and savoelif chains.
+savoprint (1 && 1)
+savoprint (1 && 0)
+savoprint (0 || 1)
+savoprint (0 || 0)
+savoprint (1 && 0 || 1)
+savoprint (2 > 1 && 3 > 2)
+
+# short-circuit: the right side must not run when the left decides.
+savoprint (0 && @undefined_stays_quiet)
+savoprint (1 || @undefined_stays_quiet)
+
+savovar @grade = 75
+savoif (@grade >= 90)
+    savoprint "A\n"
+savoelif (@grade >= 80)
+    savoprint "B\n"
+savoelif (@grade >= 70)
+    savoprint "C\n"
+savoelse
+    savoprint "F\n"
+savoend

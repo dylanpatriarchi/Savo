@@ -20,7 +20,8 @@ static const struct { const char *word; TokKind kind; } KEYWORDS[] = {
     { "savomin", TK_MIN },       { "savolen", TK_LEN },
     { "savoupper", TK_UPPER },   { "savolower", TK_LOWER },
     { "savostr", TK_TOSTR },     { "savonum", TK_TONUM },
-    { "savoif", TK_IF },         { "savoelse", TK_ELSE },
+    { "savoif", TK_IF },         { "savoelif", TK_ELIF },
+    { "savoelse", TK_ELSE },
     { "savoend", TK_END },       { "savowhile", TK_WHILE },
     { "savofor", TK_FOR },       { "savodef", TK_DEF },
     { "savoreturn", TK_RETURN }, { "savopush", TK_PUSH },
@@ -267,6 +268,10 @@ Token lexer_next(Lexer *lx) {
                       return make(TK_LT, line, col);
             case '>': if (cur(lx) == '=') { advance(lx); return make(TK_GE, line, col); }
                       return make(TK_GT, line, col);
+            case '&': if (cur(lx) == '&') { advance(lx); return make(TK_AND, line, col); }
+                      break;
+            case '|': if (cur(lx) == '|') { advance(lx); return make(TK_OR, line, col); }
+                      break;
             default:  break;
         }
         /* unrecognised byte: report as an error-bearing newline-free token so the
