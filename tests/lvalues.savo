@@ -1,0 +1,27 @@
+# Chained savoset targets: assign into nested arrays and objects directly.
+savovar @a = [1, 2, 3]
+savoset @a[0] = 10
+savoprint @a
+
+savovar @o = {x: 1}
+savoset @o.y = 2
+savoprint @o
+
+# nested object field
+savovar @tree = {root: {kids: [10, 20, 30], name: "r"}}
+savoset @tree.root.kids[1] = 99
+savoset @tree.root.name = "top"
+savoprint @tree.root.kids
+savoprint @tree.root.name + "\n"
+
+# 2-D array
+savovar @grid = [[0, 0], [0, 0]]
+savoset @grid[0][1] = 5
+savoset @grid[1][0] = 7
+savoprint @grid
+
+# dynamic key on an object
+savovar @m = {}
+savovar @key = "count"
+savoset @m[@key] = 42
+savoprint @m
