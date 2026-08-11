@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Savo Playground</title>
+<style>
+  :root {
+    --bg: #0f1117; --panel: #171a23; --border: #262b38; --fg: #e6e9ef;
+    --muted: #9aa4b2; --accent: #6ea8fe; --accent-fg: #06122b; --out: #0b0d13;
+    --ok: #6ee7a8; --err: #ff8f8f; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  header { padding: 20px 24px; border-bottom: 1px solid var(--border); }
+  h1 { margin: 0; font-size: 20px; letter-spacing: .3px; }
+  h1 span { color: var(--accent); }
+  header p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+  main { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px 24px; }
+  @media (max-width: 820px) { main { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .card-head { display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+  textarea { width: 100%; height: 340px; border: 0; resize: vertical; padding: 14px;
+    background: transparent; color: var(--fg); font-family: var(--mono); font-size: 14px; line-height: 1.5; outline: none; }
+  pre#out { margin: 0; height: 340px; overflow: auto; padding: 14px; background: var(--out);
+    font-family: var(--mono); font-size: 14px; line-height: 1.5; white-space: pre-wrap; }
+  button { background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 7px;
+    padding: 7px 16px; font-weight: 600; font-size: 13px; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  select { background: var(--out); color: var(--fg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 5px 8px; font-size: 13px; }
+  .row { display: flex; gap: 10px; align-items: center; }
+  .hint { color: var(--muted); font-size: 12px; }
+  footer { padding: 12px 24px 28px; color: var(--muted); font-size: 13px; }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1><span>Savo</span> Playground</h1>
+  <p>A tiny scripting language in C, compiled to WebAssembly and running entirely in your browser.</p>
+</header>
+
+<main>
+  <section class="card">
+    <div class="card-head">
+      <div class="row">
+        <button id="run">Run &nbsp;▶</button>
+        <span class="hint">Ctrl/⌘ + Enter</span>
+      </div>
+      <div class="row">
+        <label class="hint" for="examples">Example:</label>
+        <select id="examples"></select>
+      </div>
+    </div>
+    <textarea id="code" spellcheck="false" autocomplete="off"></textarea>
+  </section>
+
+  <section class="card">
+    <div class="card-head">Output</div>
+    <pre id="out">Loading the interpreter…</pre>
+  </section>
+</main>
+
+<footer>
+  Built from <a href="https://github.com/dylanpatriarchi/Savo">github.com/dylanpatriarchi/Savo</a>.
+  Everything runs client-side — no code leaves your browser.
+</footer>
+
+<script src="savo.js"></script>
+<script>
+  const EXAMPLES = {
+    "Hello & expressions":
+`savovar @answer = 6 * 7
+savoprint "The answer is " + @answer + "\\n"
+savoprint "sqrt(3^2 + 4^2) = " + savosqrt(3*3 + 4*4) + "\\n"`,
+    "Control flow":
+`savovar @grade = 82
+savoif (@grade >= 90)
+    savoprint "A\\n"
+savoelif (@grade >= 80)
+    savoprint "B\\n"
+savoelse
+    savoprint "C or below\\n"
+savoend`,
+    "Recursion":
+`savodef fact(@n)
+    savoif (@n <= 1)
+        savoreturn 1
+    savoend
+    savoreturn @n * fact(@n - 1)
+savoend
+savoprint "5! = " + fact(5) + "\\n"`,
+    "First-class functions":
+`savodef double(@x)
+    savoreturn @x * 2
+savoend
+savodef isEven(@x)
+    savoreturn @x % 2 == 0
+savoend
+savoprint savomap([1,2,3,4], double)
+savoprint savofilter([1,2,3,4,5,6], isEven)
+savoprint savosort([3,1,4,1,5,9,2,6])`,
+    "Data structures":
+`savovar @user = {name: "Ada", roles: ["admin", "dev"]}
+savoset @user.roles[1] = "maintainer"
+savoprint @user.name + " -> " + @user.roles + "\\n"
+savoforeach @r @user.roles
+    savoprint " - " + @r + "\\n"
+savoend`
+  };
+
+  const codeEl = document.getElementById("code");
+  const outEl = document.getElementById("out");
+  const runBtn = document.getElementById("run");
+  const sel = document.getElementById("examples");
+
+  for (const name of Object.keys(EXAMPLES)) {
+    const o = document.createElement("option"); o.textContent = name; sel.appendChild(o);
+  }
+  sel.onchange = () => { codeEl.value = EXAMPLES[sel.value]; };
+  codeEl.value = EXAMPLES[Object.keys(EXAMPLES)[0]];
+
+  let mod = null, buffer = "";
+  // Capture stdout AND stderr byte-by-byte via FS.init, so output without a
+  // trailing newline (and diagnostics) still show up and never leak between runs.
+  const sink = (c) => { if (c !== null) buffer += String.fromCharCode(c); };
+  const cfg = {};
+  cfg.preRun = [function () { cfg.FS.init(null, sink, sink); }];
+  runBtn.disabled = true;
+  SavoModule(cfg).then((m) => {
+    mod = m;
+    outEl.textContent = "Ready. Press Run.";
+    runBtn.disabled = false;
+  });
+
+  function run() {
+    if (!mod) return;
+    buffer = "";
+    try {
+      mod.ccall("savo_run_string", "number", ["string"], [codeEl.value]);
+      mod.ccall("savo_reset", "void", [], []);
+    } catch (e) {
+      buffer += "\n[interpreter error] " + e + "\n";
+    }
+    outEl.textContent = buffer.length ? buffer : "(no output)";
+  }
+
+  runBtn.onclick = run;
+  codeEl.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); run(); }
+  });
+</script>
+</body>
+</html>
