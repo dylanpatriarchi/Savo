@@ -596,6 +596,7 @@ Stmt *stmt_simple(StmtKind kind)    { return new_stmt(kind); }
 Stmt *stmt_pointer(char *str)       { Stmt *s = new_stmt(S_POINTER); s->str = str; return s; }
 Stmt *stmt_if(Expr *cond, Stmt *thenb, Stmt *elseb) { Stmt *s = new_stmt(S_IF); s->a = cond; s->body = thenb; s->body2 = elseb; return s; }
 Stmt *stmt_while(Expr *cond, Stmt *body) { Stmt *s = new_stmt(S_WHILE); s->a = cond; s->body = body; return s; }
+Stmt *stmt_foreach(char *var, Expr *coll, Stmt *body) { Stmt *s = new_stmt(S_FOREACH); s->str = var; s->a = coll; s->body = body; return s; }
 Stmt *stmt_return(Expr *e) { Stmt *s = new_stmt(S_RETURN); s->a = e; return s; }
 Stmt *stmt_push(char *name, Expr *e) { Stmt *s = new_stmt(S_PUSH); s->str = name; s->a = e; return s; }
 Stmt *stmt_setindex(char *name, Expr *idx, Expr *e) { Stmt *s = new_stmt(S_SETINDEX); s->str = name; s->a = idx; s->b = e; return s; }
@@ -796,6 +797,30 @@ void exec_stmt(const Stmt *s) {
         case S_WHILE:
             while (!g_returning && eval_truthy(s->a)) exec_stmt(s->body);
             break;
+        case S_FOREACH: {
+            Value coll = eval_expr(s->a);
+            if (coll.type == VAL_ARR) {
+                int i;
+                for (i = 0; i < coll.as.arr->count && !g_returning; i++) {
+                    Value el = value_copy(coll.as.arr->items[i]);
+                    symtab_set(s->str, el);
+                    value_free(el);
+                    exec_stmt(s->body);
+                }
+            } else if (coll.type == VAL_OBJ) {
+                MapEntry *e;
+                for (e = coll.as.obj->head; e != NULL && !g_returning; e = e->next) {
+                    Value k = value_str_copy(e->key);
+                    symtab_set(s->str, k);
+                    value_free(k);
+                    exec_stmt(s->body);
+                }
+            } else {
+                runtime_error("savoforeach expects an array or object");
+            }
+            value_free(coll);
+            break;
+        }
         case S_FUNCDEF:
             func_define((Stmt *) s);   /* retained by the function table */
             break;

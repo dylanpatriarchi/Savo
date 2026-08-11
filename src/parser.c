@@ -337,6 +337,20 @@ static Stmt *parse_for(Parser *P) {
     { Expr *count = parse_count(P); char *s = take_string(P); return stmt_repeat(count, s); }
 }
 
+static Stmt *parse_foreach(Parser *P) {
+    char *var;
+    Expr *coll;
+    Stmt *body;
+    p_advance(P);                        /* FOREACH */
+    if (!at(P, TK_IDENT)) perror_at(P, "expected a loop variable after savoforeach");
+    var = take_text(P);
+    coll = parse_expr(P);
+    expect(P, TK_NEWLINE, "end of line");
+    body = parse_block(P);
+    expect(P, TK_END, "savoend");
+    return stmt_foreach(var, coll, body);
+}
+
 static Stmt *parse_set(Parser *P) {
     char *name;
     p_advance(P);                        /* SET */
@@ -419,6 +433,7 @@ static Stmt *parse_statement(Parser *P, int allow_def) {
         case TK_IF:     return parse_if(P);
         case TK_WHILE:  return parse_while(P);
         case TK_FOR:    return parse_for(P);
+        case TK_FOREACH: return parse_foreach(P);
         case TK_RETURN:
             p_advance(P);
             if (at(P, TK_NEWLINE) || at(P, TK_EOF)) return stmt_return(NULL);

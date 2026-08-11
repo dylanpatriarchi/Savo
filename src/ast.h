@@ -89,6 +89,7 @@ typedef enum {
     S_BLOCK,       /* a sequence of statements (body of if/while)          */
     S_IF,          /* savoif (cond) ... [savoelse ...] savoend             */
     S_WHILE,       /* savowhile (cond) ... savoend                         */
+    S_FOREACH,     /* savoforeach @item <collection> ... savoend           */
     S_FUNCDEF,     /* savodef name(params) ... savoend                     */
     S_RETURN,      /* savoreturn [expr]                                    */
     S_PUSH,        /* savopush @a <expr>                                   */
@@ -126,6 +127,7 @@ Stmt *stmt_block_new(void);
 void  stmt_block_add(Stmt *block, Stmt *s);   /* appends s to block */
 Stmt *stmt_if(Expr *cond, Stmt *thenb, Stmt *elseb /*nullable*/);
 Stmt *stmt_while(Expr *cond, Stmt *body);
+Stmt *stmt_foreach(char *var, Expr *coll, Stmt *body);  /* savoforeach @v <coll> */
 Stmt *stmt_funcdef(char *name, Param *params, Stmt *body);
 Stmt *stmt_return(Expr *e /*nullable*/);
 Stmt *stmt_push(char *name, Expr *e);           /* savopush @a <expr> */
