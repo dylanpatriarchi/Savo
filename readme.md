@@ -1,5 +1,7 @@
 # Savo
 
+[![CI](https://github.com/dylanpatriarchi/Savo/actions/workflows/ci.yml/badge.svg)](https://github.com/dylanpatriarchi/Savo/actions/workflows/ci.yml)
+
 Savo is a tiny scripting language with a console REPL, implemented in C with a
 **hand-written lexer and recursive-descent parser** (no external toolchain).
 Every command is a keyword prefixed with `savo` — `savoprint`, `savosum`,
@@ -119,4 +121,6 @@ Makefile           build system
 ## Contributing
 
 Contributions are welcome — open an issue or reach the author at
-`info@patriarchidylan.it`.
+`info@patriarchidylan.it`. Please run `make test` (and, ideally, `make asan`)
+before opening a pull request; CI runs the suite on Linux and macOS, plus an
+AddressSanitizer/UBSan build, on every push.
