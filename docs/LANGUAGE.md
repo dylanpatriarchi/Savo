@@ -540,6 +540,10 @@ When stdin is a pipe or a file, Savo runs in **quiet script mode**: it prints no
 banner and does not auto-insert newlines after `savoprint`. When stdin is a
 terminal it runs the interactive REPL with the banner and `>>>` prompt.
 
+The REPL supports line editing: **←/→** and **Home/End** move the cursor,
+**↑/↓** browse history, **Backspace/Delete** edit, **Ctrl-C** cancels the line,
+and **Ctrl-D** on an empty line exits.
+
 ## Error handling
 
 - A **syntax error** prints `savo: line N:C: <detail>` (with a line and column)
