@@ -483,6 +483,9 @@ terminal it runs the interactive REPL with the banner and `>>>` prompt.
 - A **syntax error** prints `savo: line N:C: <detail>` (with a line and column)
   to stderr and the interpreter resumes at the next line, so a single typo does
   not abort a run.
+- **Runtime diagnostics** (undefined variable, division by zero, out-of-range
+  access, …) are prefixed with the line of the statement that triggered them,
+  e.g. `savo: line 7: division by zero`.
 - **Undefined variables** warn on stderr and evaluate to `0`.
 - **Division / modulo by zero** and **log of a non-positive number** warn on
   stderr and produce no result line.
