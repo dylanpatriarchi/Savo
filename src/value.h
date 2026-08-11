@@ -25,7 +25,8 @@ typedef enum {
  * Arrays are heap objects shared by reference and reclaimed by reference
  * counting: copying a Value that holds an array bumps the count rather than
  * duplicating the elements, so `savovar @b = @a` makes @b and @a see the same
- * list. (Reference cycles are not collected, but a script is short-lived.)
+ * list. Reference cycles (a container reachable only through itself) are
+ * reclaimed by the mark-and-sweep collector declared at the bottom of this file.
  */
 typedef struct Array {
     int           rc;
