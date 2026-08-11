@@ -3,6 +3,9 @@
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
+#include <dirent.h>
+#include <fnmatch.h>
+#include <sys/stat.h>
 #include "ast.h"
 #include "value.h"
 #include "global.h"
@@ -19,6 +22,16 @@ static void *xmalloc(size_t n) {
     void *p = malloc(n);
     if (p == NULL) { fprintf(stderr, "savo: out of memory\n"); exit(1); }
     return p;
+}
+
+/* Uniform-ish random integer in [lo, hi], bounds swapped if reversed. Computed
+ * in long so a wide int range cannot overflow (hi - lo + 1) as it did before. */
+static double random_in_range(double dlo, double dhi) {
+    long lo = (long) dlo, hi = (long) dhi, t;
+    unsigned long span;
+    if (hi < lo) { t = lo; lo = hi; hi = t; }
+    span = (unsigned long) (hi - lo) + 1UL;
+    return (double) (lo + (long) ((unsigned long) rand() % span));
 }
 
 /* Return handling: set by S_RETURN, checked by block/loop execution. */
@@ -38,6 +51,15 @@ static Stmt *func_lookup(const char *name) {
 void func_define(Stmt *def) {
     def->next = g_functions;   /* reuse next to chain the table; defs live forever */
     g_functions = def;
+}
+
+/* Release every registered function at shutdown. The table is a plain ->next
+ * chain of S_FUNCDEF nodes, so a single free_stmt frees them all (and their
+ * bodies). Lets the process exit with no leaked definitions. */
+void func_free_all(void) {
+    Stmt *f = g_functions;
+    g_functions = NULL;
+    free_stmt(f);
 }
 
 /* Small builders for parameter / argument lists (used by the parser). */
@@ -153,6 +175,11 @@ Expr *expr_object(Pair *pairs) {
 void exec_stmt(const Stmt *s);
 static double eval_num(const Expr *e);
 
+/* Guards the C stack against unbounded (e.g. accidentally infinite) Savo
+ * recursion, which would otherwise segfault the interpreter. */
+#define MAX_CALL_DEPTH 1000
+static int g_call_depth = 0;
+
 static Value call_user(const Expr *e) {
     Stmt *fn = func_lookup(e->as.ucall.name);
     int i, saved_r;
@@ -161,6 +188,10 @@ static Value call_user(const Expr *e) {
     if (fn == NULL) { runtime_error("call to undefined function"); return value_num(0); }
     if (e->as.ucall.argc != fn->nparams) {
         runtime_error("wrong number of arguments in function call");
+        return value_num(0);
+    }
+    if (g_call_depth >= MAX_CALL_DEPTH) {
+        runtime_error("maximum call depth exceeded (infinite recursion?)");
         return value_num(0);
     }
 
@@ -178,7 +209,9 @@ static Value call_user(const Expr *e) {
 
     saved_r = g_returning; saved_v = g_return_value;
     g_returning = 0; g_return_value = value_num(0);
+    g_call_depth++;
     exec_stmt(fn->body);
+    g_call_depth--;
     rv = g_return_value;                 /* transfer ownership out */
     g_returning = saved_r; g_return_value = saved_v;
 
@@ -198,11 +231,8 @@ static Value call_builtin(Builtin fn, Value a, Value b) {
         case FN_POW:   return value_num(pow(value_to_number(a), value_to_number(b)));
         case FN_MAX:   { double x = value_to_number(a), y = value_to_number(b); return value_num(x > y ? x : y); }
         case FN_MIN:   { double x = value_to_number(a), y = value_to_number(b); return value_num(x < y ? x : y); }
-        case FN_RANDOM: {
-            int lo = (int) value_to_number(a), hi = (int) value_to_number(b), t;
-            if (hi < lo) { t = lo; lo = hi; hi = t; }
-            return value_num(lo + rand() % (hi - lo + 1));
-        }
+        case FN_RANDOM:
+            return value_num(random_in_range(value_to_number(a), value_to_number(b)));
         case FN_LEN:   { if (a.type == VAL_ARR) return value_num(array_length(a)); if (a.type == VAL_OBJ) return value_num(object_length(a)); { char *s = value_to_string(a); double n = (double) strlen(s); free(s); return value_num(n); } }
         case FN_STR:   return value_str(value_to_string(a));
         case FN_NUM:   return value_num(value_to_number(a));
@@ -435,6 +465,62 @@ Stmt *stmt_forrange(Expr *a, Expr *b, Expr *step, char *str, ForMode mode, Expr 
 
 static int interactive(void) { return strlen(prompt) > 0; }
 
+/* List a directory without a shell, so a savodir/savols argument can never be
+ * interpreted as a command (the old system("ls %s") allowed `savols ; rm -rf ~`).
+ * An argument naming a directory lists it; otherwise it is treated as a glob
+ * pattern (optionally with a leading directory) matched against entry names. */
+static void list_dir(const char *arg) {
+    const char *dir = ".";
+    const char *pat = NULL;
+    char        dirbuf[1024];
+    char        argbuf[1024];
+    struct dirent **names;
+    int n, i;
+
+    /* The lexer hands over the raw rest of the line, so a quoted argument such
+     * as savols "*.md" arrives with its quotes; strip a matched surrounding
+     * pair (the shell used to do this before we dropped system()). */
+    if (arg != NULL) {
+        size_t alen = strlen(arg);
+        if (alen >= 2 && arg[0] == '"' && arg[alen - 1] == '"') {
+            size_t inner = alen - 2;
+            if (inner >= sizeof argbuf) inner = sizeof argbuf - 1;
+            memcpy(argbuf, arg + 1, inner);
+            argbuf[inner] = '\0';
+            arg = argbuf;
+        }
+    }
+
+    if (arg != NULL && *arg != '\0') {
+        struct stat st;
+        if (stat(arg, &st) == 0 && S_ISDIR(st.st_mode)) {
+            dir = arg;
+        } else {
+            const char *slash = strrchr(arg, '/');
+            if (slash != NULL) {
+                size_t plen = (size_t) (slash - arg);
+                if (plen >= sizeof dirbuf) plen = sizeof dirbuf - 1;
+                memcpy(dirbuf, arg, plen);
+                dirbuf[plen] = '\0';
+                dir = dirbuf[0] ? dirbuf : "/";
+                pat = slash + 1;
+            } else {
+                pat = arg;
+            }
+        }
+    }
+
+    n = scandir(dir, &names, NULL, alphasort);
+    if (n < 0) { fprintf(stderr, "savo: cannot list '%s'\n", dir); return; }
+    for (i = 0; i < n; i++) {
+        const char *nm = names[i]->d_name;
+        int show = pat ? fnmatch(pat, nm, 0) == 0 : nm[0] != '.';
+        if (show) printf("%s\n", nm);
+        free(names[i]);
+    }
+    free(names);
+}
+
 static void print_help(void) {
     printf("\n");
     printf("savoprint\t<expr>\t\t\t\tprint a value (string or number)\n");
@@ -508,12 +594,9 @@ void exec_stmt(const Stmt *s) {
             }
             break;
         }
-        case S_RANDOM: {
-            int lo = (int) eval_num(s->a), hi = (int) eval_num(s->b), t;
-            if (hi < lo) { t = lo; lo = hi; hi = t; }
-            printf("%d\n", lo + rand() % (hi - lo + 1));
+        case S_RANDOM:
+            printf("%d\n", (int) random_in_range(eval_num(s->a), eval_num(s->b)));
             break;
-        }
         case S_REPEAT: {
             int i, n = (int) eval_num(s->a);
             for (i = 0; i < n; i++) printf("%s\n", s->str);
@@ -574,16 +657,13 @@ void exec_stmt(const Stmt *s) {
             break;
         }
         case S_DIR:
-            if (interactive()) {
-                if (s->str) { char cmd[600]; snprintf(cmd, sizeof cmd, "ls %s", s->str); system(cmd); }
-                else system("ls");
-            }
+            if (interactive()) list_dir(s->str);
             break;
         case S_CLS:
-            if (interactive()) { system("cls"); printf("%s", consoleMex); }
-            break;
         case S_CLEAR:
-            if (interactive()) { system("clear"); printf("%s", consoleMex); }
+            /* ANSI erase-screen + cursor-home: portable and shell-free, unlike
+             * system("cls") (which does not even exist on Unix). */
+            if (interactive()) { printf("\033[2J\033[H%s", consoleMex); }
             break;
         case S_HELP:
             print_help();

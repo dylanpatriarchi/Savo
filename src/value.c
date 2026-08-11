@@ -128,9 +128,17 @@ Value array_get(Value v, int i) {
     return value_copy(a->items[i]);
 }
 
+/* Largest zero-fill gap a single savoset may open, so `savoset @a[huge] = x`
+ * cannot exhaust time and memory growing the array one element at a time. */
+#define ARRAY_MAX_GROW (1 << 20)
+
 void array_set(Value v, int i, Value elem) {
     Array *a = v.as.arr;
     if (i < 0) { fprintf(stderr, "savo: array index %d out of range\n", i); return; }
+    if (i > a->count && i - a->count > ARRAY_MAX_GROW) {
+        fprintf(stderr, "savo: array index %d too far past the end to grow to\n", i);
+        return;
+    }
     while (a->count <= i) array_push(v, value_num(0));   /* grow with zeros */
     value_free(a->items[i]);
     a->items[i] = value_copy(elem);
@@ -155,9 +163,15 @@ static void sb_append(char **buf, size_t *len, size_t *cap, const char *s) {
     *len += n;
 }
 
+/* Deepest nesting repr_into will render before printing "..." instead. This
+ * bounds the C stack and, crucially, stops infinite recursion on reference
+ * cycles (e.g. an array pushed onto itself). */
+#define REPR_MAX_DEPTH 128
+
 /* Render a value; array elements quote their strings so nesting stays readable. */
-static void repr_into(char **buf, size_t *len, size_t *cap, Value v, int quote_str) {
+static void repr_into(char **buf, size_t *len, size_t *cap, Value v, int quote_str, int depth) {
     char tmp[64];
+    if (depth > REPR_MAX_DEPTH) { sb_append(buf, len, cap, "..."); return; }
     switch (v.type) {
         case VAL_NUM:
             snprintf(tmp, sizeof tmp, "%.2f", v.as.num);
@@ -173,7 +187,7 @@ static void repr_into(char **buf, size_t *len, size_t *cap, Value v, int quote_s
             sb_append(buf, len, cap, "[");
             for (i = 0; i < v.as.arr->count; i++) {
                 if (i) sb_append(buf, len, cap, ", ");
-                repr_into(buf, len, cap, v.as.arr->items[i], 1);
+                repr_into(buf, len, cap, v.as.arr->items[i], 1, depth + 1);
             }
             sb_append(buf, len, cap, "]");
             break;
@@ -187,7 +201,7 @@ static void repr_into(char **buf, size_t *len, size_t *cap, Value v, int quote_s
                 first = 0;
                 sb_append(buf, len, cap, e->key);
                 sb_append(buf, len, cap, ": ");
-                repr_into(buf, len, cap, *e->val, 1);
+                repr_into(buf, len, cap, *e->val, 1, depth + 1);
             }
             sb_append(buf, len, cap, "}");
             break;
@@ -201,7 +215,7 @@ char *value_to_string(Value v) {
     {
         char  *buf = xstrdup("");
         size_t len = 0, cap = 1;
-        repr_into(&buf, &len, &cap, v, 0);
+        repr_into(&buf, &len, &cap, v, 0, 0);
         return buf;
     }
 }

@@ -129,6 +129,8 @@ Stmt *stmt_setindex(char *name, Expr *idx, Expr *e); /* savoset @a[i] = <expr> *
 
 /* Register a function definition (the interpreter keeps ownership). */
 void  func_define(Stmt *def);
+/* Free every registered function; call once at shutdown. */
+void  func_free_all(void);
 Stmt *stmt_arith(BinOp op, Expr *a, Expr *b);
 Stmt *stmt_math1(Builtin fn, Expr *a);
 Stmt *stmt_math2(Builtin fn, Expr *a, Expr *b);
