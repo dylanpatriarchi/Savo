@@ -119,6 +119,30 @@ docs/              language reference
 Makefile           build system
 ```
 
+## Embedding
+
+Because the lexer and parser are reentrant and free of a build-time toolchain,
+Savo can be embedded in a C program as a library. Build `libsavo.a` and link
+against it, including [`src/savo.h`](src/savo.h):
+
+```c
+#include "savo.h"
+
+savo_run_string("savovar @x = 6 * 7\nsavoprint \"x = \" + @x + \"\\n\"");
+savo_reset();   /* clear variables and functions between programs */
+```
+
+```sh
+make lib                                   # builds libsavo.a
+cc -Isrc examples/embed.c libsavo.a -lm -o embed
+# or simply:
+make embed && ./embed
+```
+
+Variables and functions persist across `savo_run_string` calls until
+`savo_reset()`, and in embedded use `savoquit` stops the current run instead of
+terminating the host process. See [`examples/embed.c`](examples/embed.c).
+
 ## Contributing
 
 Contributions are welcome — please open an issue or a pull request. Run
