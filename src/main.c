@@ -103,6 +103,7 @@ int main(int argc, char **argv) {
     lexer_free(&lx);
     symtab_free();
     func_free_all();
+    gc_sweep_all();          /* reclaim any leftover reference cycles */
     savo_history_free();
     return had_error;
 }

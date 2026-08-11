@@ -50,6 +50,14 @@ static Value g_return_value = { VAL_NUM, { 0 } };
 enum { LOOP_NONE, LOOP_BREAK, LOOP_CONTINUE };
 static int g_loop_signal = LOOP_NONE;
 
+/* GC roots: every reachable variable plus any pending return value. Called by
+ * gc_collect, which only runs at safe points (no expression evaluation in
+ * progress), so these are the only live container Values. */
+void savo_gc_mark_roots(void) {
+    symtab_mark_all();
+    value_mark(g_return_value);
+}
+
 /* Registered user functions (each points at a retained S_FUNCDEF node). */
 static Stmt *g_functions = NULL;
 

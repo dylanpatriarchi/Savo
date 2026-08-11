@@ -25,13 +25,16 @@ typedef enum {
  * Arrays are heap objects shared by reference and reclaimed by reference
  * counting: copying a Value that holds an array bumps the count rather than
  * duplicating the elements, so `savovar @b = @a` makes @b and @a see the same
- * list. (Reference cycles are not collected, but a script is short-lived.)
+ * list. Reference cycles (a container reachable only through itself) are
+ * reclaimed by the mark-and-sweep collector declared at the bottom of this file.
  */
 typedef struct Array {
     int           rc;
     struct Value *items;
     int           count;
     int           cap;
+    int           mark;      /* GC mark bit */
+    struct Array *gc_next;   /* intrusive list of all live arrays */
 } Array;
 
 /* Objects are string-keyed maps, also shared by reference and refcounted. */
@@ -42,9 +45,11 @@ typedef struct MapEntry {
 } MapEntry;
 
 typedef struct Map {
-    int       rc;
-    MapEntry *head;
-    int       count;
+    int         rc;
+    MapEntry   *head;
+    int         count;
+    int         mark;      /* GC mark bit */
+    struct Map *gc_next;   /* intrusive list of all live maps */
 } Map;
 
 typedef struct Value {
@@ -92,5 +97,15 @@ int    value_truthy(Value v);        /* number != 0, or non-empty string */
 /* helpers */
 int    value_is_str(Value v);
 void   value_print(Value v);         /* print without a trailing newline */
+
+/* ---- cycle-collecting garbage collector ----
+ * Reference counting frees everything except reference cycles (an array or
+ * object reachable only through itself). A mark-and-sweep pass reclaims those.
+ * It must run only at a safe point — between top-level statements or at
+ * shutdown — where the only live container Values are reachable from the roots
+ * marked by savo_gc_mark_roots (provided by the interpreter). */
+void   value_mark(Value v);          /* mark v and everything it reaches */
+void   gc_collect(void);             /* mark from roots, sweep unreachable cycles */
+void   gc_sweep_all(void);           /* free every remaining container (shutdown) */
 
 #endif

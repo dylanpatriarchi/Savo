@@ -32,4 +32,7 @@ void symtab_pop_scope(void);
 /* Release every scope's memory (clean shutdown). */
 void symtab_free(void);
 
+/* GC support: mark every variable's value as a root. */
+void symtab_mark_all(void);
+
 #endif

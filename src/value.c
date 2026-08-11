@@ -34,11 +34,16 @@ Value value_str_copy(const char *s) {
     return value_str(xstrdup(s));
 }
 
+/* Intrusive lists of every live array and map, walked by the collector. */
+static Array *g_arrays = NULL;
+static Map   *g_maps   = NULL;
+
 Value value_array(void) {
     Array *a = malloc(sizeof(Array));
     Value v;
     if (a == NULL) { fprintf(stderr, "savo: out of memory\n"); exit(1); }
     a->rc = 1; a->items = NULL; a->count = 0; a->cap = 0;
+    a->mark = 0; a->gc_next = g_arrays; g_arrays = a;
     v.type = VAL_ARR; v.as.arr = a;
     return v;
 }
@@ -48,8 +53,20 @@ Value value_object(void) {
     Value v;
     if (m == NULL) { fprintf(stderr, "savo: out of memory\n"); exit(1); }
     m->rc = 1; m->head = NULL; m->count = 0;
+    m->mark = 0; m->gc_next = g_maps; g_maps = m;
     v.type = VAL_OBJ; v.as.obj = m;
     return v;
+}
+
+/* Unlink a container from its live-list when reference counting frees it, so a
+ * later GC sweep does not touch already-freed memory. */
+static void gc_unlink_array(Array *a) {
+    Array **p = &g_arrays;
+    while (*p != NULL) { if (*p == a) { *p = a->gc_next; return; } p = &(*p)->gc_next; }
+}
+static void gc_unlink_map(Map *m) {
+    Map **p = &g_maps;
+    while (*p != NULL) { if (*p == m) { *p = m->gc_next; return; } p = &(*p)->gc_next; }
 }
 
 Value value_copy(Value v) {
@@ -65,6 +82,7 @@ void value_free(Value v) {
         Array *a = v.as.arr;
         int i;
         if (--a->rc > 0) return;
+        gc_unlink_array(a);
         for (i = 0; i < a->count; i++) value_free(a->items[i]);
         free(a->items);
         free(a);
@@ -74,6 +92,7 @@ void value_free(Value v) {
         Map *m = v.as.obj;
         MapEntry *e;
         if (--m->rc > 0) return;
+        gc_unlink_map(m);
         e = m->head;
         while (e) {
             MapEntry *next = e->next;
@@ -264,6 +283,79 @@ int value_truthy(Value v) {
 }
 
 int value_is_str(Value v) { return v.type == VAL_STR; }
+
+/* ---------------------------- garbage collector ------------------------- */
+
+/* Provided by the interpreter: mark every root (symbol table + pending return
+ * value) by calling value_mark on each. */
+extern void savo_gc_mark_roots(void);
+
+void value_mark(Value v) {
+    if (v.type == VAL_ARR) {
+        Array *a = v.as.arr;
+        int i;
+        if (a->mark) return;
+        a->mark = 1;
+        for (i = 0; i < a->count; i++) value_mark(a->items[i]);
+    } else if (v.type == VAL_OBJ) {
+        Map *m = v.as.obj;
+        MapEntry *e;
+        if (m->mark) return;
+        m->mark = 1;
+        for (e = m->head; e != NULL; e = e->next) value_mark(*e->val);
+    }
+}
+
+/* Free a container's own storage without recursing into container children:
+ * those are separate list entries the sweep frees on their own, so touching
+ * them here (via value_free) would double-free. Only leaf strings are freed. */
+static void sweep_free_array(Array *a) {
+    int i;
+    for (i = 0; i < a->count; i++)
+        if (a->items[i].type == VAL_STR) free(a->items[i].as.str);
+    free(a->items);
+    free(a);
+}
+static void sweep_free_map(Map *m) {
+    MapEntry *e = m->head;
+    while (e != NULL) {
+        MapEntry *next = e->next;
+        if (e->val->type == VAL_STR) free(e->val->as.str);
+        free(e->val);
+        free(e->key);
+        free(e);
+        e = next;
+    }
+    free(m);
+}
+
+void gc_collect(void) {
+    Array *a, **pa;
+    Map   *m, **pm;
+
+    for (a = g_arrays; a != NULL; a = a->gc_next) a->mark = 0;
+    for (m = g_maps;   m != NULL; m = m->gc_next) m->mark = 0;
+
+    savo_gc_mark_roots();
+
+    pa = &g_arrays;
+    while (*pa != NULL) {
+        Array *cur = *pa;
+        if (cur->mark) { pa = &cur->gc_next; }
+        else { *pa = cur->gc_next; sweep_free_array(cur); }
+    }
+    pm = &g_maps;
+    while (*pm != NULL) {
+        Map *cur = *pm;
+        if (cur->mark) { pm = &cur->gc_next; }
+        else { *pm = cur->gc_next; sweep_free_map(cur); }
+    }
+}
+
+void gc_sweep_all(void) {
+    while (g_arrays != NULL) { Array *n = g_arrays->gc_next; sweep_free_array(g_arrays); g_arrays = n; }
+    while (g_maps   != NULL) { Map   *n = g_maps->gc_next;   sweep_free_map(g_maps);     g_maps   = n; }
+}
 
 void value_print(Value v) {
     if (v.type == VAL_STR) { printf("%s", v.as.str); return; }

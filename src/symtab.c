@@ -154,3 +154,14 @@ void symtab_free(void) {
     while (current != &global) symtab_pop_scope();
     free_symbols(&global);
 }
+
+void symtab_mark_all(void) {
+    Scope *scope;
+    int i;
+    for (scope = current; scope != NULL; scope = scope->parent) {
+        for (i = 0; i < scope->nbuckets; i++) {
+            Symbol *s;
+            for (s = scope->buckets[i]; s != NULL; s = s->next) value_mark(s->value);
+        }
+    }
+}
