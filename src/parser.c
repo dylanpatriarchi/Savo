@@ -445,6 +445,8 @@ static Stmt *parse_statement(Parser *P, int allow_def) {
             name = take_text(P);
             return stmt_push(name, parse_expr(P));
         }
+        case TK_BREAK:    p_advance(P); return stmt_simple(S_BREAK);
+        case TK_CONTINUE: p_advance(P); return stmt_simple(S_CONTINUE);
         case TK_SET:    return parse_set(P);
         case TK_DEF:
             if (!allow_def) perror_at(P, "functions can only be defined at the top level");
