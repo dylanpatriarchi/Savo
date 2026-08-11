@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "symtab.h"
+#include "global.h"
 
 typedef struct Symbol {
     char           *name;
@@ -54,7 +55,7 @@ Value symtab_get(const char *name) {
         Symbol *s = find_local(scope, name);
         if (s != NULL) return value_copy(s->value);
     }
-    fprintf(stderr, "savo: undefined variable '%s' (using 0)\n", name);
+    savo_warn("undefined variable '%s' (using 0)", name);
     return value_num(0);
 }
 
