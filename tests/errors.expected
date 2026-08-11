@@ -1,9 +1,9 @@
-0.00
+nil
 after undefined
 after div by zero
-0.00
+nil
 after out-of-range index
 0.00
 after sqrt of negative
-0.00
+nil
 after missing key

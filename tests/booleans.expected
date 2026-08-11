@@ -1,0 +1,12 @@
+true
+false
+nil
+true
+false
+true
+false
+nil is falsy
+2.00
+nil
+nil
+[true, false, nil, 7.00]
