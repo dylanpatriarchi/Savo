@@ -28,6 +28,7 @@ typedef enum {
     FN_LEN, FN_UPPER, FN_LOWER, FN_STR, FN_NUM,                     /* string ops  */
     FN_TRIM, FN_SUBSTR, FN_INDEXOF, FN_REPLACE, FN_SPLIT, FN_JOIN,  /* more strings */
     FN_POP, FN_CONTAINS, FN_KEYS,                                   /* collections */
+    FN_MAP, FN_FILTER, FN_REDUCE, FN_SORT,                          /* higher-order */
     FN_INPUT                                                        /* read a line */
 } Builtin;
 
@@ -45,7 +46,7 @@ typedef struct Expr {
         struct { BinOp op; struct Expr *l, *r; } bin; /* E_BIN  */
         struct Expr *unary;                           /* E_NEG / E_NOT */
         struct { Builtin fn; struct Expr *a, *b, *c; } call; /* E_CALL (b, c may be NULL) */
-        struct { char *name; struct Expr **argv; int argc; } ucall; /* E_CALLUSER */
+        struct { struct Expr *callee; struct Expr **argv; int argc; } ucall; /* E_CALLUSER */
         struct { struct Expr **items; int count; } list; /* E_ARRAY */
         struct { struct Expr *base, *idx; } index;    /* E_INDEX (array/string/object) */
         struct { char **keys; struct Expr **vals; int count; } object; /* E_OBJECT */
@@ -69,7 +70,7 @@ Expr *expr_bin(BinOp op, Expr *l, Expr *r);
 Expr *expr_neg(Expr *e);
 Expr *expr_not(Expr *e);
 Expr *expr_call(Builtin fn, Expr *a, Expr *b, Expr *c);  /* b, c nullable */
-Expr *expr_calluser(char *name, Arg *args);    /* user function call */
+Expr *expr_calluser(Expr *callee, Arg *args);  /* call whatever callee yields */
 Expr *expr_array(Arg *items);                  /* array literal [ ... ] */
 Expr *expr_index(Expr *base, Expr *idx);       /* subscript base[idx] / base.key */
 Expr *expr_object(Pair *pairs);                /* object literal { k: v, ... } */
