@@ -136,7 +136,7 @@ Stmt *stmt_foreach(char *var, Expr *coll, Stmt *body);  /* savoforeach @v <coll>
 Stmt *stmt_funcdef(char *name, Param *params, Stmt *body);
 Stmt *stmt_return(Expr *e /*nullable*/);
 Stmt *stmt_push(char *name, Expr *e);           /* savopush @a <expr> */
-Stmt *stmt_setindex(char *name, Expr *idx, Expr *e); /* savoset @a[i] = <expr> */
+Stmt *stmt_setindex(Expr *target, Expr *value); /* savoset <lvalue chain> = <expr> */
 
 /* Register a function definition (the interpreter keeps ownership). */
 void  func_define(Stmt *def);

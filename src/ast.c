@@ -612,7 +612,7 @@ Stmt *stmt_while(Expr *cond, Stmt *body) { Stmt *s = new_stmt(S_WHILE); s->a = c
 Stmt *stmt_foreach(char *var, Expr *coll, Stmt *body) { Stmt *s = new_stmt(S_FOREACH); s->str = var; s->a = coll; s->body = body; return s; }
 Stmt *stmt_return(Expr *e) { Stmt *s = new_stmt(S_RETURN); s->a = e; return s; }
 Stmt *stmt_push(char *name, Expr *e) { Stmt *s = new_stmt(S_PUSH); s->str = name; s->a = e; return s; }
-Stmt *stmt_setindex(char *name, Expr *idx, Expr *e) { Stmt *s = new_stmt(S_SETINDEX); s->str = name; s->a = idx; s->b = e; return s; }
+Stmt *stmt_setindex(Expr *target, Expr *value) { Stmt *s = new_stmt(S_SETINDEX); s->a = target; s->b = value; return s; }
 Stmt *stmt_block_new(void) { return new_stmt(S_BLOCK); }
 
 void stmt_block_add(Stmt *block, Stmt *s) {
@@ -865,17 +865,21 @@ void exec_stmt(const Stmt *s) {
             break;
         }
         case S_SETINDEX: {
-            Value container = symtab_get(s->str);
+            /* The target is an index/field chain (E_INDEX). Evaluating its base
+             * yields the innermost container shared by reference, so a single
+             * set at the end mutates it in place at any nesting depth. */
+            const Expr *target = s->a;
             Value el = eval_expr(s->b);
+            Value container = eval_expr(target->as.index.base);
             if (container.type == VAL_OBJ) {
-                Value k = eval_expr(s->a);
+                Value k = eval_expr(target->as.index.idx);
                 char *key = value_to_string(k);
                 object_set(container, key, el);
                 free(key); value_free(k);
             } else if (container.type == VAL_ARR) {
-                array_set(container, (int) eval_num(s->a), el);
+                array_set(container, (int) eval_num(target->as.index.idx), el);
             } else {
-                runtime_error("savoset on a value that is not an array or object");
+                runtime_error("savoset target is not an array or object");
             }
             value_free(el);
             value_free(container);
