@@ -9,9 +9,6 @@
 #include "ast.h"
 #include "symtab.h"
 
-/* Set on any syntax or runtime error; becomes the process exit status. */
-int had_error = 0;
-
 static void usage(const char *prog) {
     printf("Savo %s — a tiny scripting language\n\n", SAVO_VERSION);
     printf("Usage:\n");

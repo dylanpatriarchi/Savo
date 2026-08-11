@@ -2,7 +2,10 @@
 #include <stdarg.h>
 #include "global.h"
 
+int had_error = 0;
 int savo_line = 0;
+int savo_exit_on_quit = 1;
+int savo_quit_flag = 0;
 
 void savo_warn(const char *fmt, ...) {
     va_list ap;

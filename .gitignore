@@ -1,6 +1,8 @@
 # Build output
 /savo
 /savo.exe
+/libsavo.a
+/embed
 *.dSYM/
 
 # Editor / OS noise
