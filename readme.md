@@ -120,7 +120,6 @@ Makefile           build system
 
 ## Contributing
 
-Contributions are welcome — open an issue or reach the author at
-`info@patriarchidylan.it`. Please run `make test` (and, ideally, `make asan`)
-before opening a pull request; CI runs the suite on Linux and macOS, plus an
-AddressSanitizer/UBSan build, on every push.
+Contributions are welcome — please open an issue or a pull request. Run
+`make test` (and, ideally, `make asan`) before opening a PR; CI runs the suite
+on Linux and macOS, plus an AddressSanitizer/UBSan build, on every push.
