@@ -1,0 +1,16 @@
+# savoassert: passing assertions are silent; write tests in Savo itself.
+savoassert 1 == 1
+savoassert (2 + 2) == 4 "arithmetic"
+savoassert savolen([1, 2, 3]) == 3
+savoassert "apple" < "banana"
+savoassert savotrue
+savoassert !savofalse
+savoassert savonil == savonil
+
+savodef square(@n)
+    savoreturn @n * @n
+savoend
+savoassert square(5) == 25 "function result"
+savoassert savomap([1, 2, 3], square)[2] == 9
+
+savoprint "all assertions passed\n"
