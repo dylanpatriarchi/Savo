@@ -35,4 +35,5 @@ int savo_run_string(const char *code) {
 void savo_reset(void) {
     symtab_free();
     func_free_all();
+    gc_sweep_all();   /* reclaim any reference cycles before the next program */
 }

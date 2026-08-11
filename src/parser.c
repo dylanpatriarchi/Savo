@@ -518,6 +518,7 @@ static Stmt *parse_block(Parser *P) {
 
 void parser_run(Lexer *lx) {
     Parser P;
+    unsigned long stmt_count = 0;
     P.lx = lx;
     P.depth = 0;
     P.cur = lexer_next(lx);
@@ -550,6 +551,10 @@ void parser_run(Lexer *lx) {
             }
 
             if (at(&P, TK_NEWLINE)) p_advance(&P);
+
+            /* Safe point (no evaluation in progress): reclaim any reference
+             * cycles that reference counting cannot, every so often. */
+            if ((++stmt_count & 127) == 0) gc_collect();
         }
     }
     free(P.cur.text);
