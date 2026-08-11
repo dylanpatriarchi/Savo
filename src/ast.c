@@ -153,6 +153,11 @@ Expr *expr_object(Pair *pairs) {
 void exec_stmt(const Stmt *s);
 static double eval_num(const Expr *e);
 
+/* Guards the C stack against unbounded (e.g. accidentally infinite) Savo
+ * recursion, which would otherwise segfault the interpreter. */
+#define MAX_CALL_DEPTH 1000
+static int g_call_depth = 0;
+
 static Value call_user(const Expr *e) {
     Stmt *fn = func_lookup(e->as.ucall.name);
     int i, saved_r;
@@ -161,6 +166,10 @@ static Value call_user(const Expr *e) {
     if (fn == NULL) { runtime_error("call to undefined function"); return value_num(0); }
     if (e->as.ucall.argc != fn->nparams) {
         runtime_error("wrong number of arguments in function call");
+        return value_num(0);
+    }
+    if (g_call_depth >= MAX_CALL_DEPTH) {
+        runtime_error("maximum call depth exceeded (infinite recursion?)");
         return value_num(0);
     }
 
@@ -178,7 +187,9 @@ static Value call_user(const Expr *e) {
 
     saved_r = g_returning; saved_v = g_return_value;
     g_returning = 0; g_return_value = value_num(0);
+    g_call_depth++;
     exec_stmt(fn->body);
+    g_call_depth--;
     rv = g_return_value;                 /* transfer ownership out */
     g_returning = saved_r; g_return_value = saved_v;
 
