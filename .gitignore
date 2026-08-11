@@ -1,12 +1,6 @@
 # Build output
-/build/
 /savo
 /savo.exe
-
-# Generated lexer/parser (produced by flex/bison during the build)
-lex.yy.c
-parser.tab.c
-parser.tab.h
 
 # Editor / OS noise
 .DS_Store
